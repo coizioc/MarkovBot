@@ -23,7 +23,6 @@ def get_user_servers(userid):
     user_json = open_user_options(userid)
 
     if 'servers' in user_json.keys():
-        print(user_json['servers'])
         return user_json['servers']
     else:
         return None

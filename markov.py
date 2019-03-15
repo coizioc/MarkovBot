@@ -88,16 +88,17 @@ def generate_models(userids):
     """Generates a Markov model from a list of Member objects."""
     models = []
     for userid in userids:
-        try:
+
             user_servers = st.get_user_servers(userid)
             if not user_servers:
                 continue
             for server in user_servers:
-                with open(f'{MODELS_DIRECTORY}{server}/{userid}.json', 'r', encoding='utf-8-sig') as json_file:
-                    models.append(markovify.Text.from_json(json_file.read()))
-        except FileNotFoundError:
-            print(f'userid: {userid}')
-            pass
+                try:
+                    with open(f'{MODELS_DIRECTORY}{server}/{userid}.json', 'r', encoding='utf-8-sig') as json_file:
+                        models.append(markovify.Text.from_json(json_file.read()))
+                except FileNotFoundError:
+                    print(f'userid: {userid}, server: {server}')
+                    pass
     return models
 
 
