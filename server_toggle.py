@@ -11,6 +11,14 @@ for line in RAW_SERVERS:
     SERVERS[server_id] = name
 
 
+def get_serverid(server):
+    for serverid, name in SERVERS.items():
+        if server == name:
+            return serverid
+    else:
+        return None
+
+
 def get_user_servers(userid):
     user_json = open_user_options(userid)
 
@@ -29,7 +37,7 @@ def list_servers(userid):
     out = 'List of MarkovBot Servers:\n'
     user_servers = get_user_servers(userid)
     for server_id, name in SERVERS.items():
-        if user_servers and name in user_servers:
+        if user_servers and server_id in user_servers:
             out += f'**{name}**\n'
         else:
             out += name + '\n'
@@ -54,12 +62,13 @@ def save_user_options(userid, user_dict):
 def toggle_server(userid, server):
     user_dict = open_user_options(userid)
     server_added = False
+    serverid = get_serverid(server)
     if 'servers' not in user_dict.keys():
         user_dict['servers'] = []
-    if server in user_dict['servers']:
-        user_dict['servers'].remove(server)
+    if serverid in user_dict['servers']:
+        user_dict['servers'].remove(serverid)
     else:
-        user_dict['servers'].append(server)
+        user_dict['servers'].append(serverid)
         server_added = True
     save_user_options(userid, user_dict)
     return server_added
