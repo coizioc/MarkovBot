@@ -1,13 +1,9 @@
+import markovify
 import random
 
-import markovify
-from discord.ext import commands
+import server_toggle as st
 
-import config
 from config import MODELS_DIRECTORY, NAMES_FILE
-
-USERID = '297481821472686081'
-USERNAME = "Sprouts"
 
 DEFAULT_NAME = 'MarkovBot'
 DESCRIPTION = "Bot that keeps tracks of when reactions are added/removed."
@@ -51,10 +47,10 @@ class AmbiguousInputError(Exception):
 def generate_markov(person_ids, root):
     """Generates a Markov sentence and nickname based off a list of Members and a given root."""
     nick = generate_nick(person_ids)
-    try:
-        models = generate_models(person_ids)
-    except FileNotFoundError:
-        return "File not found for person(s).", DEFAULT_NAME
+
+    models = generate_models(person_ids)
+    if not models:
+        return "No output.", DEFAULT_NAME
     text_model = markovify.combine(models)
 
     for _ in range(MAX_MARKOV_ATTEMPTS):
@@ -93,132 +89,47 @@ def generate_models(userids):
     models = []
     for userid in userids:
         try:
-            with open(f'{MODELS_DIRECTORY}{userid}.json', 'r', encoding='utf-8-sig') as json_file:
-                models.append(markovify.Text.from_json(json_file.read()))
+            user_servers = st.get_user_servers(userid)
+            if not user_servers:
+                continue
+            for server in user_servers:
+                with open(f'{MODELS_DIRECTORY}{server}/{userid}.json', 'r', encoding='utf-8-sig') as json_file:
+                    models.append(markovify.Text.from_json(json_file.read()))
         except FileNotFoundError:
-            raise FileNotFoundError()
+            print(f'userid: {userid}')
+            pass
     return models
 
 
-class MarkovBot(commands.Bot):
-    def __init__(self):
-        super().__init__(command_prefix=["$"], description=DESCRIPTION)
-        self.default_nick = DEFAULT_NAME
-        self.add_command(self.do)
-        self.add_command(self.list)
+def parse_names(ctx, person):
+    """Retrieves a string of names and converts them into a list of userids."""
+    namelist = person.lower().split('+')
+    num_names = len(namelist)
+    if num_names > MAX_NUM_NAMES:
+        raise TooManyInputsError(num_names)
+    input_ids = []
 
-    async def on_ready(self):
-        """Prints bot initialization info"""
-        print('Logged in as')
-        print(self.user.name)
-        print(self.user.id)
-        print('------')
-
-    async def on_message(self, message):
-        """Handles commands based on messages sent"""
-        if message.author.bot:
-            return
-        await self.process_commands(message)
-
-    async def on_member_update(self, before, after):
-        """Resets bot's nickname anytime it is changed."""
-        if before.id == self.user.id and before.nick != after.nick:
-            await after.edit(nick=self.default_nick)
-
-    @commands.command()
-    async def do(self, ctx, person=REFLEXIVE_TAG, root=None):
-        """Creates a Markov sentence based off of a user."""
-
-        if person == 'htz':
-            person = INCLUSIVE_TAG
-        if person == REFLEXIVE_TAG:
-            person = person.replace(REFLEXIVE_TAG, ctx.author.name)
-        try:
-            person_ids = self.parse_names(ctx, person)
-        except TooManyInputsError as e:
-            error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
-            await ctx.send(error_msg)
-            return
-        except NameNotFoundError as e:
-            error_msg = f'Name not found {e.name}.'
-            await ctx.send(error_msg)
-            return
-        except AmbiguousInputError as e:
-            error_msg = f'{e.name} maps to multiple people: {e.output}.'
-            await ctx.send(error_msg)
-            return
-
-        msg, nick = generate_markov(person_ids, root)
-
-        current_guild = ctx.guild
-        bot_self = current_guild.me
-
-        if person == INCLUSIVE_TAG:
-            nick = ctx.guild.name.title()
-        await bot_self.edit(nick=nick)
-        await ctx.send(msg)
-
-    @commands.command()
-    async def list(self, ctx, search=None):
-        """Prints a list of everyone who has a Markov model."""
-        out = []
-        message = ''
-        for name in NAMES.values():
-            if search:
-                if search.lower() not in name.lower():
-                    continue
-            if len(message) + len(name) < MAX_MESSAGE_LENGTH:
-                message += name + ', '
-            else:
-                out.append(message[:-2])
-                message = name + ', '
+    for name in namelist:
+        current_name = []
+        if name == RANDOM_TAG:
+            input_ids.append(random.choice(list(NAMES.keys())))
+        elif name == INCLUSIVE_TAG:
+            input_ids.extend(random.sample(list(NAMES.keys()), 5))
+        elif name == REFLEXIVE_TAG:
+            input_ids.append(str(ctx.author.id))
         else:
-            out.append(message[:-2])
-        if len(out) > 1:
-            for msg in out:
-                await ctx.author.send(msg)
-        else:
-            for msg in out:
-                await ctx.send(msg)
-
-    def parse_names(self, ctx, person):
-        """Retrieves a string of names and converts them into a list of Member objects."""
-        namelist = person.lower().split('+')
-        num_names = len(namelist)
-        if num_names > MAX_NUM_NAMES:
-            raise TooManyInputsError(num_names)
-        input_ids = []
-
-        for name in namelist:
-            current_name = []
-            if name == RANDOM_TAG:
-                input_ids.append(random.choice(list(NAMES.keys())))
-            elif name == INCLUSIVE_TAG:
-                input_ids.extend(random.sample(list(NAMES.keys()), 5))
-            elif name == REFLEXIVE_TAG:
-                input_ids.append(str(ctx.author.id))
+            for userid in NAMES.keys():
+                if name.lower() == NAMES[userid].lower():
+                    input_ids.append(userid)
+                    break
+                if name.lower() in NAMES[userid].lower():
+                    current_name.append(userid)
             else:
-                for userid in NAMES.keys():
-                    if name.lower() == NAMES[userid].lower():
-                        input_ids.append(userid)
-                        break
-                    if name.lower() in NAMES[userid].lower():
-                        current_name.append(userid)
+                if not current_name:
+                    raise NameNotFoundError(name)
+                elif len(current_name) == 1:
+                    input_ids.append(current_name[0])
                 else:
-                    if not current_name:
-                        raise NameNotFoundError(name)
-                    elif len(current_name) == 1:
-                        input_ids.append(current_name[0])
-                    else:
-                        raise AmbiguousInputError(name, [NAMES[userid] for userid in current_name])
-        else:
-            return input_ids
-
-    def run(self):
-        """Runs the bot with the token from the config file."""
-        super().run(config.token, reconnect=True)
-
-
-if __name__ == "__main__":
-    bot = MarkovBot()
-    bot.run()
+                    raise AmbiguousInputError(name, [NAMES[userid] for userid in current_name])
+    else:
+        return input_ids
