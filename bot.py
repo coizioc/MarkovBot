@@ -1,10 +1,14 @@
+import asyncio
+import random
+import re
+
 from discord.ext import commands
 
-import markov as mk
-from markov import REFLEXIVE_TAG, INCLUSIVE_TAG, NAMES
-import server_toggle as st
 import config
+import markov as mk
+import server_toggle as st
 from config import MAX_MESSAGE_LENGTH
+from markov import REFLEXIVE_TAG, INCLUSIVE_TAG, NAMES
 
 DEFAULT_NAME = 'MarkovBot'
 DESCRIPTION = "Bot that creates stuff based off of Markov chains."
@@ -17,9 +21,13 @@ class MarkovBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix=["$"], description=DESCRIPTION)
         self.default_nick = DEFAULT_NAME
+        self.simulator_queue = []
+        self.topic = ""
+        self.total_simulation_messages = 0
         self.add_command(self.do)
         self.add_command(self.list)
         self.add_command(self.toggle)
+        self.loop.create_task(self.update_simulator())
 
     async def on_ready(self):
         """Prints bot initialization info"""
@@ -110,6 +118,58 @@ class MarkovBot(commands.Bot):
         else:
             out = st.list_servers(ctx.author.id)
             await ctx.send(out)
+
+    async def update_simulator(self):
+        """Updates the htz simulator."""
+        await self.wait_until_ready()
+        while not self.is_closed():
+            # Fills the queue if empty, otherwise pops the first element
+            user_model = None
+            next_user = None
+            out = None
+            while not out:
+                while not user_model:
+                    if not self.simulator_queue:
+                        self.simulator_queue = mk.fill_simulator_queue()
+                    next_user = self.simulator_queue.pop(0)
+
+                    # Generates the model for the user and generates a sentence for that user.
+                    user_model = mk.generate_model([next_user])
+
+                for _ in range(3):
+                    out = mk.generate_sentence(user_model, root=self.topic)
+                    if out:
+                        break
+                else:
+                    out = mk.generate_sentence(user_model)
+
+                for userid, name in mk.NAMES.items():
+                    if name in out:
+                        self.simulator_queue.insert(random.randint(0, 2), userid)
+
+                mentions = set([c for c in out[0].split(' ') if c[0:2] == '<@'])
+                for mention in mentions:
+                    self.simulator_queue.insert(random.randint(0, 1), mention[2:])
+
+                # Topic is last word of out, stripped of non-alphanumeric characters.
+                self.topic = out.split()[-1]
+                re.sub(r'\W+', '', self.topic)
+
+            # Posts that message to the SIMULATOR_CHANNEL
+            nick = mk.generate_nick([next_user])
+            bot_guild = self.get_guild(config.DEFAULT_GUILD_ID)
+            bot_self = bot_guild.get_channel(config.SIMULATOR_CHANNEL)
+            await bot_self.edit(nick=nick)
+            await bot_self.send(out)
+
+            self.total_simulation_messages += 1
+            print(self.total_simulation_messages)
+            if self.total_simulation_messages % 20 == 0:
+                self.topic = None
+
+            # Generate wait time and wait.
+            wait_time = mk.get_wait_time()
+            await asyncio.sleep(1)
 
     def run(self):
         """Runs the bot with the token from the config file."""
