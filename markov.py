@@ -1,9 +1,10 @@
 import markovify
 import random
+import numpy as np
 
 import server_toggle as st
 
-from config import MODELS_DIRECTORY, NAMES_FILE
+from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE
 
 DEFAULT_NAME = 'MarkovBot'
 DESCRIPTION = "Bot that keeps tracks of when reactions are added/removed."
@@ -23,6 +24,9 @@ NAMES = {}
 for line in RAW_NAMES:
     id, name = line.split(';')
     NAMES[id] = name
+
+with open(USER_MODEL_FILE, 'r', encoding='utf-8-sig') as f:
+    USER_MODEL = markovify.Text.from_json(f.read())
 
 
 class TooManyInputsError(Exception):
@@ -48,21 +52,29 @@ def generate_markov(person_ids, root):
     """Generates a Markov sentence and nickname based off a list of Members and a given root."""
     nick = generate_nick(person_ids)
 
-    models = generate_models(person_ids)
-    if not models:
+    model = generate_model(person_ids)
+    if not model:
         return "No output.", DEFAULT_NAME
-    text_model = markovify.combine(models)
 
+    sentence = generate_sentence(model, root)
+    if sentence:
+        return sentence, nick
+    else:
+        return "Insufficient data for Markov chain.", DEFAULT_NAME
+
+
+def generate_sentence(model, root=None):
+    """Generates a sentence from a text_model and returns the """
     for _ in range(MAX_MARKOV_ATTEMPTS):
         if root is None:
-            output = text_model.make_sentence(tries=MAX_MARKOV_ATTEMPTS)
+            output = model.make_sentence(tries=MAX_MARKOV_ATTEMPTS)
         else:
-            output = text_model.make_sentence_with_start(
+            output = model.make_sentence_with_start(
                 root, tries=MAX_MARKOV_ATTEMPTS, strict=False)
         if output is not None:
-            return output, nick.title()
+            return output
     else:
-        return 'Error: insufficient data for Markov chain.', DEFAULT_NAME
+        return None
 
 
 def generate_nick(person_ids):
@@ -84,22 +96,37 @@ def generate_nick(person_ids):
     return nickname
 
 
-def generate_models(userids):
+def fill_simulator_queue():
+    """Generates a list of userids to post in the htz simulator."""
+    users = USER_MODEL.make_sentence().split(' ')
+    return users
+
+
+def get_wait_time():
+    """Gets the wait time between messages in the htz simulator."""
+    wait_time = np.random.normal(15, 10)
+    if wait_time < 1:
+        wait_time = 1
+    return wait_time
+
+
+def generate_model(userids):
     """Generates a Markov model from a list of Member objects."""
     models = []
     for userid in userids:
-
-            user_servers = st.get_user_servers(userid)
-            if not user_servers:
-                continue
-            for server in user_servers:
-                try:
-                    with open(f'{MODELS_DIRECTORY}{server}/{userid}.json', 'r', encoding='utf-8-sig') as json_file:
-                        models.append(markovify.Text.from_json(json_file.read()))
-                except FileNotFoundError:
-                    print(f'userid: {userid}, server: {server}')
-                    pass
-    return models
+        user_servers = st.get_user_servers(userid)
+        if not user_servers:
+            continue
+        for server in user_servers:
+            try:
+                with open(f'{MODELS_DIRECTORY}{server}/{userid}.json', 'r', encoding='utf-8-sig') as json_file:
+                    models.append(markovify.Text.from_json(json_file.read()))
+            except FileNotFoundError:
+                print(f'userid: {userid}, server: {server}')
+                pass
+    if models:
+        return markovify.combine(models)
+    return None
 
 
 def parse_names(ctx, person):
