@@ -27,7 +27,8 @@ class MarkovBot(commands.Bot):
         self.add_command(self.do)
         self.add_command(self.list)
         self.add_command(self.toggle)
-        self.loop.create_task(self.update_simulator())
+        self.add_command(self.random_link)
+        # self.loop.create_task(self.update_simulator())
 
     async def on_ready(self):
         """Prints bot initialization info"""
@@ -47,7 +48,7 @@ class MarkovBot(commands.Bot):
         if before.id == self.user.id and before.nick != after.nick:
             await after.edit(nick=self.default_nick)
 
-    @commands.command()
+    @commands.command(aliases=['mk'])
     async def do(self, ctx, person=REFLEXIVE_TAG, root=None):
         """Creates a Markov sentence based off of a user."""
 
@@ -102,6 +103,11 @@ class MarkovBot(commands.Bot):
         else:
             for msg in out:
                 await ctx.send(msg)
+
+    @commands.command(aliases=['linkme', 'randlink'])
+    async def random_link(self, ctx):
+        """Returns a random link."""
+        await ctx.send(mk.get_rand_link())
 
     @commands.command()
     async def toggle(self, ctx, server=None):
@@ -169,7 +175,7 @@ class MarkovBot(commands.Bot):
 
             # Generate wait time and wait.
             wait_time = mk.get_wait_time()
-            await asyncio.sleep(1)
+            await asyncio.sleep(wait_time)
 
     def run(self):
         """Runs the bot with the token from the config file."""

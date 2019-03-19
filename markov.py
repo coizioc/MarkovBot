@@ -4,7 +4,7 @@ import numpy as np
 
 import server_toggle as st
 
-from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE
+from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE
 
 DEFAULT_NAME = 'MarkovBot'
 DESCRIPTION = "Bot that keeps tracks of when reactions are added/removed."
@@ -28,6 +28,8 @@ for line in RAW_NAMES:
 with open(USER_MODEL_FILE, 'r', encoding='utf-8-sig') as f:
     USER_MODEL = markovify.Text.from_json(f.read())
 
+with open(LINKS_FILE) as f:
+    LINKS = f.read().splitlines()
 
 class TooManyInputsError(Exception):
     """Error raised for too many inputs."""
@@ -46,6 +48,11 @@ class AmbiguousInputError(Exception):
     def __init__(self, name, output):
         self.name = name
         self.output = output
+
+
+def get_rand_link():
+    """Gets a random link from LINKS."""
+    return random.choice(LINKS)
 
 
 def generate_markov(person_ids, root):
