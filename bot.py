@@ -5,6 +5,7 @@ import re
 from discord.ext import commands
 
 import config
+import deathmatch as dm
 import markov as mk
 import server_toggle as st
 from config import MAX_MESSAGE_LENGTH
@@ -22,12 +23,14 @@ class MarkovBot(commands.Bot):
         super().__init__(command_prefix=["$"], description=DESCRIPTION)
         self.default_nick = DEFAULT_NAME
         self.simulator_queue = []
+        self.doing_dm = False
         self.topic = ""
         self.total_simulation_messages = 0
         self.add_command(self.do)
         self.add_command(self.list)
         self.add_command(self.toggle)
         self.add_command(self.random_link)
+        self.add_command(self.deathmatch)
         # self.loop.create_task(self.update_simulator())
 
     async def on_ready(self):
@@ -124,6 +127,32 @@ class MarkovBot(commands.Bot):
         else:
             out = st.list_servers(ctx.author.id)
             await ctx.send(out)
+
+    @commands.command(aliases=['dm'])
+    async def deathmatch(self, ctx, *args):
+        if not self.doing_dm:
+            self.doing_dm = True
+            try:
+                fighter1 = ctx.author.name
+                if not args:
+                    fighter2 = mk.get_rand_name()
+                else:
+                    if ctx.message.mentions:
+                        fighter2 = ctx.message.mentions[0].name
+                    else:
+                        fighter2 = args[0].title()
+                msgs, winner = dm.do_deathmatch(fighter1, fighter2)
+                out = await ctx.send("test")
+                for msg in msgs:
+                    await out.edit(content=msg)
+                    await asyncio.sleep(2)
+                self.doing_dm = False
+            except Exception as e:
+                print(e)
+                self.doing_dm = False
+        else:
+            await ctx.send("A deathmatch is currently in progress. Please wait until it finishes before starting a new one.")
+
 
     async def update_simulator(self):
         """Updates the htz simulator."""

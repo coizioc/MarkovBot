@@ -16,6 +16,8 @@ MAX_NUM_NAMES = 10
 INCLUSIVE_TAG = 'all'
 RANDOM_TAG = 'rand'
 REFLEXIVE_TAG = 'me'
+BEGIN_TAG = 'BEGIN_LINE'
+END_TAG = 'END_LINE'
 
 with open(NAMES_FILE, 'r', encoding='utf-8') as f:
     RAW_NAMES = f.read().splitlines()
@@ -53,6 +55,11 @@ class AmbiguousInputError(Exception):
 def get_rand_link():
     """Gets a random link from LINKS."""
     return random.choice(LINKS)
+
+
+def get_rand_name():
+    """Gets a random name from NAMES."""
+    return random.choice(list(NAMES.values()))
 
 
 def generate_markov(person_ids, root):
