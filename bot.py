@@ -107,7 +107,7 @@ class MarkovBot(commands.Bot):
             for msg in out:
                 await ctx.send(msg)
 
-    @commands.command(aliases=['linkme', 'randlink'])
+    @commands.command(aliases=['linkme', 'randlink', 'lonk'])
     async def random_link(self, ctx):
         """Returns a random link."""
         await ctx.send(mk.get_rand_link())
