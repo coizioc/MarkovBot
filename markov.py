@@ -61,6 +61,12 @@ def get_rand_name():
     """Gets a random name from NAMES."""
     return random.choice(list(NAMES.values()))
 
+def get_name(name):
+    """Gets a name from an userid."""
+    if name in NAMES.keys():
+        return NAMES[name]
+    else:
+        return None
 
 def generate_markov(person_ids, root):
     """Generates a Markov sentence and nickname based off a list of Members and a given root."""
