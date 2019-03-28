@@ -382,6 +382,9 @@ class MarkovBot(commands.Bot):
                     else:
                         out = mk.generate_sentence(user_model)
 
+                    if not out:
+                        continue
+
                     for userid, name in mk.NAMES.items():
                         if name in out:
                             self.simulator_queue.insert(random.randint(0, 2), userid)
@@ -400,6 +403,7 @@ class MarkovBot(commands.Bot):
             try:
                 # Posts that message to the SIMULATOR_CHANNEL
                 nick = mk.generate_nick([next_user])
+                out = f'**{nick}**: {out}'
                 bot_guild = self.get_guild(config.DEFAULT_GUILD_ID)
                 bot_channel = bot_guild.get_channel(cp.get_channel(config.DEFAULT_GUILD_ID, cp.SIMULATION_KEY))
                 bot_self = bot_guild.me
