@@ -364,41 +364,50 @@ class MarkovBot(commands.Bot):
             user_model = None
             next_user = None
             out = None
-            while not out:
-                while not user_model:
-                    if not self.simulator_queue:
-                        self.simulator_queue = mk.fill_simulator_queue()
-                    next_user = self.simulator_queue.pop(0)
 
-                    # Generates the model for the user and generates a sentence for that user.
-                    user_model = mk.generate_model([next_user])
+            try:
+                while not out:
+                    while not user_model:
+                        if not self.simulator_queue:
+                            self.simulator_queue = mk.fill_simulator_queue()
+                        next_user = self.simulator_queue.pop(0)
 
-                for _ in range(3):
-                    out = mk.generate_sentence(user_model, root=self.topic)
-                    if out:
-                        break
-                else:
-                    out = mk.generate_sentence(user_model)
+                        # Generates the model for the user and generates a sentence for that user.
+                        user_model = mk.generate_model([next_user])
 
-                for userid, name in mk.NAMES.items():
-                    if name in out:
-                        self.simulator_queue.insert(random.randint(0, 2), userid)
+                    for _ in range(3):
+                        out = mk.generate_sentence(user_model, root=self.topic)
+                        if out:
+                            break
+                    else:
+                        out = mk.generate_sentence(user_model)
 
-                mentions = set([c for c in out[0].split(' ') if c[0:2] == '<@'])
-                for mention in mentions:
-                    self.simulator_queue.insert(random.randint(0, 1), mention[2:])
+                    for userid, name in mk.NAMES.items():
+                        if name in out:
+                            self.simulator_queue.insert(random.randint(0, 2), userid)
 
-                # Topic is last word of out, stripped of non-alphanumeric characters.
-                self.topic = out.split()[-1]
-                re.sub(r'\W+', '', self.topic)
+                    mentions = set([c for c in out[0].split(' ') if c[0:2] == '<@'])
+                    for mention in mentions:
+                        self.simulator_queue.insert(random.randint(0, 1), mention[2:])
 
-            # Posts that message to the SIMULATOR_CHANNEL
-            nick = mk.generate_nick([next_user])
-            bot_guild = self.get_guild(config.DEFAULT_GUILD_ID)
-            bot_channel = bot_guild.get_channel(cp.get_channel(config.DEFAULT_GUILD_ID, cp.SIMULATION_KEY))
-            bot_self = bot_guild.me
-            await bot_self.edit(nick=nick)
-            await bot_channel.send(out)
+                    # Topic is last word of out, stripped of non-alphanumeric characters.
+                    self.topic = out.split()[-1]
+                    re.sub(r'\W+', '', self.topic)
+            except Exception as e:
+                with open('debug.txt', 'a+') as f:
+                    f.write(str(e))
+
+            try:
+                # Posts that message to the SIMULATOR_CHANNEL
+                nick = mk.generate_nick([next_user])
+                bot_guild = self.get_guild(config.DEFAULT_GUILD_ID)
+                bot_channel = bot_guild.get_channel(cp.get_channel(config.DEFAULT_GUILD_ID, cp.SIMULATION_KEY))
+                bot_self = bot_guild.me
+                await bot_self.edit(nick=nick)
+                await bot_channel.send(out)
+            except Exception as e:
+                with open('debug.txt', 'a+') as f:
+                    f.write(str(e))
 
             self.total_simulation_messages += 1
             if self.total_simulation_messages % 20 == 0:
