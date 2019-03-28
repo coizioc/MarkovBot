@@ -405,6 +405,8 @@ class MarkovBot(commands.Bot):
                 nick = mk.generate_nick([next_user])
                 out = f'**{nick}**: {out}'
                 bot_guild = self.get_guild(config.DEFAULT_GUILD_ID)
+                out = remove_mentions(out, bot_guild)
+
                 bot_channel = bot_guild.get_channel(cp.get_channel(config.DEFAULT_GUILD_ID, cp.SIMULATION_KEY))
                 bot_self = bot_guild.me
                 await bot_self.edit(nick=nick)
