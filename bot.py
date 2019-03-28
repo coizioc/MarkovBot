@@ -368,6 +368,7 @@ class MarkovBot(commands.Bot):
                     for _ in range(3):
                         out = mk.generate_sentence(user_model, root=self.topic)
                         if out:
+                            out = out.split(' ', 1)[1]
                             break
                     else:
                         out = mk.generate_sentence(user_model)
