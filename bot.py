@@ -5,6 +5,7 @@ import re
 from discord.ext import commands
 
 import config
+from config import MAX_NUM_NAMES
 import channel_permissions as cp
 from discord.ext.commands import has_permissions
 import markov as mk
@@ -14,9 +15,6 @@ from markov import REFLEXIVE_TAG, INCLUSIVE_TAG, NAMES
 
 DEFAULT_NAME = 'MarkovBot'
 DESCRIPTION = "Bot that creates stuff based off of Markov chains."
-MAX_MARKOV_ATTEMPTS = 10
-MAX_NICKNAME_LENGTH = 30
-MAX_NUM_NAMES = 10
 
 
 def has_post_permission(guildid, channelid):
@@ -106,19 +104,8 @@ class MarkovBot(commands.Bot):
                 person = INCLUSIVE_TAG
             if person == REFLEXIVE_TAG:
                 person = person.replace(REFLEXIVE_TAG, ctx.author.name)
-            try:
-                person_ids = mk.parse_names(ctx, person)
-            except mk.TooManyInputsError as e:
-                error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
-                await ctx.send(error_msg)
-                return
-            except mk.NameNotFoundError as e:
-                error_msg = f'Name not found {e.name}.'
-                await ctx.send(error_msg)
-                return
-            except mk.AmbiguousInputError as e:
-                error_msg = f'{e.name} maps to multiple people: {e.output}.'
-                await ctx.send(error_msg)
+            person_ids = await self.get_person_ids(ctx, person)
+            if not person_ids:
                 return
 
             msg, nick = mk.generate_markov(person_ids, root)
@@ -147,19 +134,8 @@ class MarkovBot(commands.Bot):
                 person = INCLUSIVE_TAG
             if person == REFLEXIVE_TAG:
                 person = person.replace(REFLEXIVE_TAG, ctx.author.name)
-            try:
-                person_ids = mk.parse_names(ctx, person)
-            except mk.TooManyInputsError as e:
-                error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
-                await ctx.send(error_msg)
-                return
-            except mk.NameNotFoundError as e:
-                error_msg = f'Name not found {e.name}.'
-                await ctx.send(error_msg)
-                return
-            except mk.AmbiguousInputError as e:
-                error_msg = f'{e.name} maps to multiple people: {e.output}.'
-                await ctx.send(error_msg)
+            person_ids = await self.get_person_ids(ctx, person)
+            if not person_ids:
                 return
 
             msg, nick = mk.generate_markov(person_ids, root, num=num)
@@ -181,19 +157,9 @@ class MarkovBot(commands.Bot):
                 person = INCLUSIVE_TAG
             if person == REFLEXIVE_TAG:
                 person = person.replace(REFLEXIVE_TAG, ctx.author.name)
-            try:
-                person_ids = mk.parse_names(ctx, person)
-            except mk.TooManyInputsError as e:
-                error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
-                await ctx.send(error_msg)
-                return
-            except mk.NameNotFoundError as e:
-                error_msg = f'Name not found {e.name}.'
-                await ctx.send(error_msg)
-                return
-            except mk.AmbiguousInputError as e:
-                error_msg = f'{e.name} maps to multiple people: {e.output}.'
-                await ctx.send(error_msg)
+
+            person_ids = await self.get_person_ids(ctx, person)
+            if not person_ids:
                 return
 
             msg, nick = mk.generate_markov(person_ids, root, num=10)
@@ -354,6 +320,22 @@ class MarkovBot(commands.Bot):
             simulation_channel = channel_mentions[0]
             cp.set_channel(ctx.guild.id, simulation_channel.id, cp.SIMULATION_KEY)
             await ctx.send(f"{simulation_channel.name} set as simulation channel.")
+
+    async def get_person_ids(self, ctx, person):
+        try:
+            return mk.parse_names(ctx, person)
+        except mk.TooManyInputsError as e:
+            error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
+            await ctx.send(error_msg)
+            return None
+        except mk.NameNotFoundError as e:
+            error_msg = f'Name not found {e.name}.'
+            await ctx.send(error_msg)
+            return None
+        except mk.AmbiguousInputError as e:
+            error_msg = f'{e.name} maps to multiple people: {e.output}.'
+            await ctx.send(error_msg)
+            return None
 
     async def update_simulator(self):
         """Updates the htz simulator."""

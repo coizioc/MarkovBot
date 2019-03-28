@@ -4,14 +4,11 @@ import numpy as np
 
 import server_toggle as st
 
-from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE
+from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE,\
+    MAX_NICKNAME_LENGTH, MAX_NUM_NAMES, MAX_MARKOV_ATTEMPTS
 
 DEFAULT_NAME = 'MarkovBot'
 DESCRIPTION = "Bot that keeps tracks of when reactions are added/removed."
-MAX_MARKOV_ATTEMPTS = 10
-MAX_MESSAGE_LENGTH = 1800
-MAX_NICKNAME_LENGTH = 30
-MAX_NUM_NAMES = 10
 
 INCLUSIVE_TAG = 'all'
 RANDOM_TAG = 'rand'
