@@ -348,6 +348,7 @@ class MarkovBot(commands.Bot):
             # Fills the queue if empty, otherwise pops the first element
             user_model = None
             next_user = None
+            next_user_member = None
             out = None
 
             try:
@@ -357,7 +358,8 @@ class MarkovBot(commands.Bot):
                             self.simulator_queue = mk.fill_simulator_queue()
                         next_user = self.simulator_queue.pop(0)
                         print(next_user)
-                        if not bot_guild.get_member(int(next_user)):
+                        next_user_member = bot_guild.get_member(int(next_user))
+                        if not next_user_member:
                             continue
 
                         # Generates the model for the user and generates a sentence for that user.
@@ -392,7 +394,9 @@ class MarkovBot(commands.Bot):
             try:
                 # Posts that message to the SIMULATOR_CHANNEL
 
-                nick = mk.generate_nick([next_user])
+                nick = next_user_member.nick
+                if not nick:
+                    nick = next_user_member.name
                 out = f'**{nick}**: {out}'
                 out = remove_mentions(out, bot_guild)
 
