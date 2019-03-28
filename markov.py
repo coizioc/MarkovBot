@@ -4,6 +4,7 @@ import numpy as np
 
 import server_toggle as st
 
+import config
 from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE,\
     MAX_NICKNAME_LENGTH, MAX_NUM_NAMES, MAX_MARKOV_ATTEMPTS
 
@@ -128,7 +129,7 @@ def fill_simulator_queue():
 
 def get_wait_time():
     """Gets the wait time between messages in the htz simulator."""
-    wait_time = np.random.normal(15, 10)
+    wait_time = np.random.normal(config.POST_AVG, config.POST_STDDEV)
     if wait_time < 1:
         wait_time = 1
     return wait_time

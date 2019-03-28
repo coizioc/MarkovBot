@@ -340,6 +340,9 @@ class MarkovBot(commands.Bot):
     async def update_simulator(self):
         """Updates the htz simulator."""
         await self.wait_until_ready()
+        bot_guild = self.get_guild(config.DEFAULT_GUILD_ID)
+        bot_channel = bot_guild.get_channel(cp.get_channel(config.DEFAULT_GUILD_ID, cp.SIMULATION_KEY))
+        bot_self = bot_guild.me
         while not self.is_closed():
             await self.simulation_on.wait()
             # Fills the queue if empty, otherwise pops the first element
@@ -353,6 +356,9 @@ class MarkovBot(commands.Bot):
                         if not self.simulator_queue:
                             self.simulator_queue = mk.fill_simulator_queue()
                         next_user = self.simulator_queue.pop(0)
+                        print(next_user)
+                        if not bot_guild.get_member(int(next_user)):
+                            continue
 
                         # Generates the model for the user and generates a sentence for that user.
                         user_model = mk.generate_model([next_user])
@@ -385,13 +391,11 @@ class MarkovBot(commands.Bot):
 
             try:
                 # Posts that message to the SIMULATOR_CHANNEL
+
                 nick = mk.generate_nick([next_user])
                 out = f'**{nick}**: {out}'
-                bot_guild = self.get_guild(config.DEFAULT_GUILD_ID)
                 out = remove_mentions(out, bot_guild)
 
-                bot_channel = bot_guild.get_channel(cp.get_channel(config.DEFAULT_GUILD_ID, cp.SIMULATION_KEY))
-                bot_self = bot_guild.me
                 await bot_self.edit(nick=nick)
                 await bot_channel.send(out)
             except Exception as e:
