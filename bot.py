@@ -148,7 +148,8 @@ class MarkovBot(commands.Bot):
     @commands.command(aliases=['linkme', 'randlink', 'lonk'])
     async def random_link(self, ctx):
         """Returns a random link."""
-        await ctx.send(mk.get_rand_link())
+        if ctx.guild.id == 529904258233925632:
+            await ctx.send(mk.get_rand_link())
 
     @commands.command()
     async def toggle(self, ctx, server=None):
