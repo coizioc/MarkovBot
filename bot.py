@@ -27,6 +27,7 @@ class MarkovBot(commands.Bot):
         self.topic = ""
         self.total_simulation_messages = 0
         self.add_command(self.do)
+        self.add_command(self.domulti)
         self.add_command(self.list)
         self.add_command(self.toggle)
         self.add_command(self.random_link)
@@ -75,6 +76,43 @@ class MarkovBot(commands.Bot):
             return
 
         msg, nick = mk.generate_markov(person_ids, root)
+
+        current_guild = ctx.guild
+        bot_self = current_guild.me
+
+        if person == INCLUSIVE_TAG:
+            nick = ctx.guild.name.title()
+        await bot_self.edit(nick=nick)
+        await ctx.send(msg)
+
+    @commands.command()
+    async def domulti(self, ctx, num, person=REFLEXIVE_TAG, root=None):
+        num = int(num)
+        if num > 10:
+            num = 10
+        if num < 1:
+            num = 1
+
+        if person == 'htz':
+            person = INCLUSIVE_TAG
+        if person == REFLEXIVE_TAG:
+            person = person.replace(REFLEXIVE_TAG, ctx.author.name)
+        try:
+            person_ids = mk.parse_names(ctx, person)
+        except mk.TooManyInputsError as e:
+            error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
+            await ctx.send(error_msg)
+            return
+        except mk.NameNotFoundError as e:
+            error_msg = f'Name not found {e.name}.'
+            await ctx.send(error_msg)
+            return
+        except mk.AmbiguousInputError as e:
+            error_msg = f'{e.name} maps to multiple people: {e.output}.'
+            await ctx.send(error_msg)
+            return
+
+        msg, nick = mk.generate_markov(person_ids, root, num=num)
 
         current_guild = ctx.guild
         bot_self = current_guild.me

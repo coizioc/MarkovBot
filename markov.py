@@ -61,6 +61,7 @@ def get_rand_name():
     """Gets a random name from NAMES."""
     return random.choice(list(NAMES.values()))
 
+
 def get_name(name):
     """Gets a name from an userid."""
     if name in NAMES.keys():
@@ -68,7 +69,8 @@ def get_name(name):
     else:
         return None
 
-def generate_markov(person_ids, root):
+
+def generate_markov(person_ids, root, num=1):
     """Generates a Markov sentence and nickname based off a list of Members and a given root."""
     nick = generate_nick(person_ids)
 
@@ -76,9 +78,13 @@ def generate_markov(person_ids, root):
     if not model:
         return "No output.", DEFAULT_NAME
 
-    sentence = generate_sentence(model, root)
-    if sentence:
-        return sentence, nick
+    out = ""
+    for _ in range(num):
+        sentence = generate_sentence(model, root)
+        if sentence:
+            out += sentence + '\n'
+    if out:
+        return out, nick
     else:
         return "Insufficient data for Markov chain.", DEFAULT_NAME
 
