@@ -18,6 +18,19 @@ MAX_NICKNAME_LENGTH = 30
 MAX_NUM_NAMES = 10
 
 
+def remove_mentions(msg, current_guild):
+    user_tags = set([c for c in msg.split(' ') if c[0:2] == '<@'])
+    for user_tag in user_tags:
+        id = int(re.sub('\D', '', user_tag))
+        username = current_guild.get_member(id)
+        if username is not None:
+            username = username.display_name
+            msg = msg.replace(user_tag, '@' + username)
+        elif user_tag in msg:
+            msg = msg.replace(user_tag, "@UNKNOWN_USER")
+    return msg
+
+
 class MarkovBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix=["$"], description=DESCRIPTION)
@@ -80,6 +93,8 @@ class MarkovBot(commands.Bot):
         current_guild = ctx.guild
         bot_self = current_guild.me
 
+        msg = remove_mentions(msg, current_guild)
+
         if person == INCLUSIVE_TAG:
             nick = ctx.guild.name.title()
         await bot_self.edit(nick=nick)
@@ -116,6 +131,8 @@ class MarkovBot(commands.Bot):
 
         current_guild = ctx.guild
         bot_self = current_guild.me
+
+        msg = remove_mentions(msg, current_guild)
 
         if person == INCLUSIVE_TAG:
             nick = ctx.guild.name.title()
