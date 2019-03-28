@@ -33,6 +33,7 @@ with open(USER_MODEL_FILE, 'r', encoding='utf-8-sig') as f:
 with open(LINKS_FILE) as f:
     LINKS = f.read().splitlines()
 
+
 class TooManyInputsError(Exception):
     """Error raised for too many inputs."""
     def __init__(self, number):

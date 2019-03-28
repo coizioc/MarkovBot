@@ -5,7 +5,8 @@ import re
 from discord.ext import commands
 
 import config
-import deathmatch as dm
+import channel_permissions as cp
+from discord.ext.commands import has_permissions
 import markov as mk
 import server_toggle as st
 from config import MAX_MESSAGE_LENGTH
@@ -16,6 +17,29 @@ DESCRIPTION = "Bot that creates stuff based off of Markov chains."
 MAX_MARKOV_ATTEMPTS = 10
 MAX_NICKNAME_LENGTH = 30
 MAX_NUM_NAMES = 10
+
+
+def has_post_permission(guildid, channelid):
+    """Checks whether the bot can post in that channel."""
+    guild_perms = cp.get_guild(guildid)
+    try:
+        for blacklist_channel in guild_perms[cp.BLACKLIST_KEY]:
+            if channelid == blacklist_channel:
+                return False
+    except KeyError:
+        pass
+
+    if cp.WHITELIST_KEY in guild_perms.keys():
+        if guild_perms[cp.WHITELIST_KEY]:
+            try:
+                for whitelist_channel in guild_perms[cp.WHITELIST_KEY]:
+                    if channelid == whitelist_channel:
+                        break
+                else:
+                    return False
+            except KeyError:
+                pass
+    return True
 
 
 def remove_mentions(msg, current_guild):
@@ -39,14 +63,22 @@ class MarkovBot(commands.Bot):
         self.doing_dm = False
         self.topic = ""
         self.total_simulation_messages = 0
+        self.simulation_on = asyncio.Event()
         self.add_command(self.do)
         self.add_command(self.domulti)
         self.add_command(self.do10)
         self.add_command(self.list)
         self.add_command(self.toggle)
+        self.add_command(self.togglesim)
         self.add_command(self.random_link)
-        self.add_command(self.deathmatch)
-        # self.loop.create_task(self.update_simulator())
+        self.add_command(self.listchannels)
+        self.add_command(self.addblacklist)
+        self.add_command(self.addwhitelist)
+        self.add_command(self.setsimulator)
+        self.add_command(self.removesimulator)
+        self.add_command(self.removeblacklist)
+        self.add_command(self.removewhitelist)
+        self.loop.create_task(self.update_simulator())
 
     async def on_ready(self):
         """Prints bot initialization info"""
@@ -69,133 +101,136 @@ class MarkovBot(commands.Bot):
     @commands.command(aliases=['mk'])
     async def do(self, ctx, person=REFLEXIVE_TAG, root=None):
         """Creates a Markov sentence based off of a user."""
+        if has_post_permission(ctx.guild.id, ctx.channel.id):
+            if person == 'htz':
+                person = INCLUSIVE_TAG
+            if person == REFLEXIVE_TAG:
+                person = person.replace(REFLEXIVE_TAG, ctx.author.name)
+            try:
+                person_ids = mk.parse_names(ctx, person)
+            except mk.TooManyInputsError as e:
+                error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
+                await ctx.send(error_msg)
+                return
+            except mk.NameNotFoundError as e:
+                error_msg = f'Name not found {e.name}.'
+                await ctx.send(error_msg)
+                return
+            except mk.AmbiguousInputError as e:
+                error_msg = f'{e.name} maps to multiple people: {e.output}.'
+                await ctx.send(error_msg)
+                return
 
-        if person == 'htz':
-            person = INCLUSIVE_TAG
-        if person == REFLEXIVE_TAG:
-            person = person.replace(REFLEXIVE_TAG, ctx.author.name)
-        try:
-            person_ids = mk.parse_names(ctx, person)
-        except mk.TooManyInputsError as e:
-            error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
-            await ctx.send(error_msg)
-            return
-        except mk.NameNotFoundError as e:
-            error_msg = f'Name not found {e.name}.'
-            await ctx.send(error_msg)
-            return
-        except mk.AmbiguousInputError as e:
-            error_msg = f'{e.name} maps to multiple people: {e.output}.'
-            await ctx.send(error_msg)
-            return
+            msg, nick = mk.generate_markov(person_ids, root)
 
-        msg, nick = mk.generate_markov(person_ids, root)
+            current_guild = ctx.guild
+            bot_self = current_guild.me
 
-        current_guild = ctx.guild
-        bot_self = current_guild.me
+            msg = remove_mentions(msg, current_guild)
 
-        msg = remove_mentions(msg, current_guild)
-
-        if person == INCLUSIVE_TAG:
-            nick = ctx.guild.name.title()
-        await bot_self.edit(nick=nick)
-        await ctx.send(msg)
+            if person == INCLUSIVE_TAG:
+                nick = ctx.guild.name.title()
+            await bot_self.edit(nick=nick)
+            await ctx.send(msg)
 
     @commands.command()
     async def domulti(self, ctx, num=1, person=REFLEXIVE_TAG, root=None):
-        if type(num) != int:
-            await ctx.send(f'{num} is not a number.')
-        if num > 10:
-            num = 10
-        if num < 1:
-            num = 1
+        if has_post_permission(ctx.guild.id, ctx.channel.id):
+            if type(num) != int:
+                await ctx.send(f'{num} is not a number.')
+            if num > 10:
+                num = 10
+            if num < 1:
+                num = 1
 
-        if person == 'htz':
-            person = INCLUSIVE_TAG
-        if person == REFLEXIVE_TAG:
-            person = person.replace(REFLEXIVE_TAG, ctx.author.name)
-        try:
-            person_ids = mk.parse_names(ctx, person)
-        except mk.TooManyInputsError as e:
-            error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
-            await ctx.send(error_msg)
-            return
-        except mk.NameNotFoundError as e:
-            error_msg = f'Name not found {e.name}.'
-            await ctx.send(error_msg)
-            return
-        except mk.AmbiguousInputError as e:
-            error_msg = f'{e.name} maps to multiple people: {e.output}.'
-            await ctx.send(error_msg)
-            return
+            if person == 'htz':
+                person = INCLUSIVE_TAG
+            if person == REFLEXIVE_TAG:
+                person = person.replace(REFLEXIVE_TAG, ctx.author.name)
+            try:
+                person_ids = mk.parse_names(ctx, person)
+            except mk.TooManyInputsError as e:
+                error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
+                await ctx.send(error_msg)
+                return
+            except mk.NameNotFoundError as e:
+                error_msg = f'Name not found {e.name}.'
+                await ctx.send(error_msg)
+                return
+            except mk.AmbiguousInputError as e:
+                error_msg = f'{e.name} maps to multiple people: {e.output}.'
+                await ctx.send(error_msg)
+                return
 
-        msg, nick = mk.generate_markov(person_ids, root, num=num)
+            msg, nick = mk.generate_markov(person_ids, root, num=num)
 
-        current_guild = ctx.guild
-        bot_self = current_guild.me
+            current_guild = ctx.guild
+            bot_self = current_guild.me
 
-        msg = remove_mentions(msg, current_guild)
+            msg = remove_mentions(msg, current_guild)
 
-        if person == INCLUSIVE_TAG:
-            nick = ctx.guild.name.title()
-        await bot_self.edit(nick=nick)
-        await ctx.send(msg)
+            if person == INCLUSIVE_TAG:
+                nick = ctx.guild.name.title()
+            await bot_self.edit(nick=nick)
+            await ctx.send(msg)
 
     @commands.command()
     async def do10(self, ctx, person=REFLEXIVE_TAG, root=None):
-        if person == 'htz':
-            person = INCLUSIVE_TAG
-        if person == REFLEXIVE_TAG:
-            person = person.replace(REFLEXIVE_TAG, ctx.author.name)
-        try:
-            person_ids = mk.parse_names(ctx, person)
-        except mk.TooManyInputsError as e:
-            error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
-            await ctx.send(error_msg)
-            return
-        except mk.NameNotFoundError as e:
-            error_msg = f'Name not found {e.name}.'
-            await ctx.send(error_msg)
-            return
-        except mk.AmbiguousInputError as e:
-            error_msg = f'{e.name} maps to multiple people: {e.output}.'
-            await ctx.send(error_msg)
-            return
+        if has_post_permission(ctx.guild.id, ctx.channel.id):
+            if person == 'htz':
+                person = INCLUSIVE_TAG
+            if person == REFLEXIVE_TAG:
+                person = person.replace(REFLEXIVE_TAG, ctx.author.name)
+            try:
+                person_ids = mk.parse_names(ctx, person)
+            except mk.TooManyInputsError as e:
+                error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
+                await ctx.send(error_msg)
+                return
+            except mk.NameNotFoundError as e:
+                error_msg = f'Name not found {e.name}.'
+                await ctx.send(error_msg)
+                return
+            except mk.AmbiguousInputError as e:
+                error_msg = f'{e.name} maps to multiple people: {e.output}.'
+                await ctx.send(error_msg)
+                return
 
-        msg, nick = mk.generate_markov(person_ids, root, num=10)
+            msg, nick = mk.generate_markov(person_ids, root, num=10)
 
-        current_guild = ctx.guild
-        bot_self = current_guild.me
+            current_guild = ctx.guild
+            bot_self = current_guild.me
 
-        msg = remove_mentions(msg, current_guild)
+            msg = remove_mentions(msg, current_guild)
 
-        if person == INCLUSIVE_TAG:
-            nick = ctx.guild.name.title()
-        await bot_self.edit(nick=nick)
-        await ctx.send(msg)
+            if person == INCLUSIVE_TAG:
+                nick = ctx.guild.name.title()
+            await bot_self.edit(nick=nick)
+            await ctx.send(msg)
 
     @commands.command()
     async def list(self, ctx, search=None):
         """Prints a list of everyone who has a Markov model."""
-        out = []
-        message = ''
-        for name in NAMES.values():
-            if search:
-                if search.lower() not in name.lower():
-                    continue
-            if len(message) + len(name) < MAX_MESSAGE_LENGTH:
-                message += name + ', '
+        if has_post_permission(ctx.guild.id, ctx.channel.id):
+            out = []
+            message = ''
+            for name in NAMES.values():
+                if search:
+                    if search.lower() not in name.lower():
+                        continue
+                if len(message) + len(name) < MAX_MESSAGE_LENGTH:
+                    message += name + ', '
+                else:
+                    out.append(message[:-2])
+                    message = name + ', '
             else:
                 out.append(message[:-2])
-                message = name + ', '
-        else:
-            out.append(message[:-2])
-        if len(out) > 1:
-            for msg in out:
-                await ctx.author.send(msg)
-        else:
-            for msg in out:
-                await ctx.send(msg)
+            if len(out) > 1:
+                for msg in out:
+                    await ctx.author.send(msg)
+            else:
+                for msg in out:
+                    await ctx.send(msg)
 
     @commands.command(aliases=['linkme', 'randlink', 'lonk'])
     async def random_link(self, ctx):
@@ -206,48 +241,125 @@ class MarkovBot(commands.Bot):
     @commands.command()
     async def toggle(self, ctx, server=None):
         """Lists/Toggles servers from which you want the bot to pull Markov chains."""
-        if server:
-            if not st.is_server(server):
-                await ctx.send(f'{server} is not a valid server. Type `~toggle` to see a list of valid servers.')
-            else:
-                server_added = st.toggle_server(ctx.author.id, server)
-                if server_added:
-                    await ctx.send(f'{server} added to list of your Markov servers.')
+        if has_post_permission(ctx.guild.id, ctx.channel.id):
+            if server:
+                if not st.is_server(server):
+                    await ctx.send(f'{server} is not a valid server. Type `~toggle` to see a list of valid servers.')
                 else:
-                    await ctx.send(f'{server} removed from list of your Markov servers.')
-        else:
-            out = st.list_servers(ctx.author.id)
-            await ctx.send(out)
-
-    @commands.command(aliases=['dm'])
-    async def deathmatch(self, ctx, *args):
-        if not self.doing_dm:
-            self.doing_dm = True
-            try:
-                fighter1 = ctx.author.name
-                if not args:
-                    fighter2 = mk.get_rand_name()
-                else:
-                    if ctx.message.mentions:
-                        fighter2 = ctx.message.mentions[0].name
+                    server_added = st.toggle_server(ctx.author.id, server)
+                    if server_added:
+                        await ctx.send(f'{server} added to list of your Markov servers.')
                     else:
-                        fighter2 = args[0].title()
-                msgs, winner = dm.do_deathmatch(fighter1, fighter2)
-                out = await ctx.send("test")
-                for msg in msgs:
-                    await out.edit(content=msg)
-                    await asyncio.sleep(2)
-                self.doing_dm = False
-            except Exception as e:
-                print(e)
-                self.doing_dm = False
+                        await ctx.send(f'{server} removed from list of your Markov servers.')
+            else:
+                out = st.list_servers(ctx.author.id)
+                await ctx.send(out)
+
+    @commands.command()
+    @has_permissions(manage_guild=True)
+    async def togglesim(self, ctx):
+        if self.simulation_on.is_set():
+            self.simulation_on.clear()
+            await ctx.send("Simulation ended.")
         else:
-            await ctx.send("A deathmatch is currently in progress. Please wait until it finishes before starting a new one.")
+            if not cp.get_channel(ctx.guild.id, cp.SIMULATION_KEY):
+                await ctx.send("No channel set for simulation. "
+                               "Please set the channel using `$setsim [channel mention]`")
+            self.simulation_on.set()
+            await ctx.send("Simulation started.")
+
+    @commands.command()
+    @has_permissions(manage_guild=True)
+    async def listchannels(self, ctx):
+        """Lists the channels in which the bot is white/blacklisted."""
+        guild_perms = cp.get_guild(ctx.guild.id)
+        await ctx.send(guild_perms)
+
+    @commands.command()
+    @has_permissions(manage_guild=True)
+    async def addblacklist(self, ctx):
+        """Adds a channel to the blacklist."""
+        channel_mentions = ctx.message.channel_mentions
+
+        if channel_mentions:
+            out = ''
+            for channel in channel_mentions:
+                cp.add_channel(ctx.guild.id, channel.id, cp.BLACKLIST_KEY)
+                out += f'{channel.name}, '
+            await ctx.send(f"{out[:-2]} added to blacklist!")
+
+    @commands.command()
+    @has_permissions(manage_guild=True)
+    async def addwhitelist(self, ctx):
+        """Adds a channel to the whitelist."""
+        channel_mentions = ctx.message.channel_mentions
+
+        if channel_mentions:
+            out = ''
+            for channel in channel_mentions:
+                cp.add_channel(ctx.guild.id, channel.id, cp.WHITELIST_KEY)
+                out += f'{channel.name}, '
+            await ctx.send(f"{out[:-2]} added to whitelist!")
+
+    @commands.command(aliases=['removesim'])
+    @has_permissions(manage_guild=True)
+    async def removesimulator(self, ctx):
+        """Removes an announcements channel."""
+        cp.clear_channel(ctx.guild.id, cp.SIMULATION_KEY)
+        await ctx.send(f"Removed simulation channel!")
+
+    @commands.command()
+    @has_permissions(manage_guild=True)
+    async def removeblacklist(self, ctx):
+        """Removes a blacklisted channel."""
+        channel_mentions = ctx.message.channel_mentions
+
+        if channel_mentions:
+            out = ''
+            for channel in channel_mentions:
+                try:
+                    cp.remove_channel(ctx.guild.id, channel.id, cp.BLACKLIST_KEY)
+                    out += f'{channel.name}, '
+                except ValueError:
+                    pass
+            if len(out) < 2:
+                out = 'No channels were  '
+            await ctx.send(f"{out[:-2]} removed from blacklist!")
+
+    @commands.command()
+    @has_permissions(manage_guild=True)
+    async def removewhitelist(self, ctx):
+        """Removes a whitelisted guild."""
+        channel_mentions = ctx.message.channel_mentions
+
+        if channel_mentions:
+            out = ''
+            for channel in channel_mentions:
+                try:
+                    cp.remove_channel(ctx.guild.id, channel.id, cp.WHITELIST_KEY)
+                    out += f'{channel.name}, '
+                except ValueError:
+                    pass
+            if len(out) < 2:
+                out = 'No channels were  '
+            await ctx.send(f"{out[:-2]} removed from whitelist!")
+
+    @commands.command(aliases=['setsim'])
+    @has_permissions(manage_guild=True)
+    async def setsimulator(self, ctx):
+        """Sets the default simulation channel."""
+        channel_mentions = ctx.message.channel_mentions
+
+        if channel_mentions:
+            simulation_channel = channel_mentions[0]
+            cp.set_channel(ctx.guild.id, simulation_channel.id, cp.SIMULATION_KEY)
+            await ctx.send(f"{simulation_channel.name} set as simulation channel.")
 
     async def update_simulator(self):
         """Updates the htz simulator."""
         await self.wait_until_ready()
         while not self.is_closed():
+            await self.simulation_on.wait()
             # Fills the queue if empty, otherwise pops the first element
             user_model = None
             next_user = None
@@ -283,12 +395,12 @@ class MarkovBot(commands.Bot):
             # Posts that message to the SIMULATOR_CHANNEL
             nick = mk.generate_nick([next_user])
             bot_guild = self.get_guild(config.DEFAULT_GUILD_ID)
-            bot_self = bot_guild.get_channel(config.SIMULATOR_CHANNEL)
+            bot_channel = bot_guild.get_channel(cp.get_channel(config.DEFAULT_GUILD_ID, cp.SIMULATION_KEY))
+            bot_self = bot_guild.me
             await bot_self.edit(nick=nick)
-            await bot_self.send(out)
+            await bot_channel.send(out)
 
             self.total_simulation_messages += 1
-            print(self.total_simulation_messages)
             if self.total_simulation_messages % 20 == 0:
                 self.topic = None
 
