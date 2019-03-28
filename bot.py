@@ -397,6 +397,7 @@ class MarkovBot(commands.Bot):
                     self.topic = out.split()[-1]
                     re.sub(r'\W+', '', self.topic)
             except Exception as e:
+                print(e)
                 with open('debug.txt', 'a+') as f:
                     f.write(str(e))
 
@@ -412,6 +413,7 @@ class MarkovBot(commands.Bot):
                 await bot_self.edit(nick=nick)
                 await bot_channel.send(out)
             except Exception as e:
+                print(e)
                 with open('debug.txt', 'a+') as f:
                     f.write(str(e))
 
