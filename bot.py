@@ -1,9 +1,10 @@
-import os
 import logging
+import os
+
 from discord.ext import commands
+
 import config
 from config import DESCRIPTION, DEFAULT_NAME
-
 
 log = logging.getLogger(__name__)
 
