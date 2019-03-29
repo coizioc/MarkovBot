@@ -1,15 +1,13 @@
-import asyncio
-import random
 import re
 
 from discord.ext import commands
 from discord.ext.commands import has_permissions
 
-import config
-from cogs.helpers import markov_helpers as mk, server_toggle as st, channel_permissions as cp
-from cogs.helpers.markov_helpers import REFLEXIVE_TAG, INCLUSIVE_TAG, NAMES
 from config import MAX_MESSAGE_LENGTH
 from config import MAX_NUM_NAMES
+from helpers import markov_helpers as mk
+from helpers import server_toggle as st, channel_permissions as cp, simulation as sim
+from helpers.markov_helpers import REFLEXIVE_TAG, INCLUSIVE_TAG, NAMES
 
 
 def has_post_permission(guildid, channelid):
@@ -51,11 +49,7 @@ def remove_mentions(msg, current_guild):
 class Markov():
     def __init__(self, bot):
         self.bot = bot
-        self.simulator_queue = []
-        self.topic = ""
-        self.total_simulation_messages = 0
-        self.simulation_on = asyncio.Event()
-        self.bot.loop.create_task(self.update_simulator())
+        self.simulation = sim.SimThread(bot)
 
     @commands.command(aliases=['mk'])
     async def do(self, ctx, person=REFLEXIVE_TAG, root=None):
@@ -183,14 +177,14 @@ class Markov():
     @commands.command()
     @has_permissions(manage_guild=True)
     async def togglesim(self, ctx):
-        if self.simulation_on.is_set():
-            self.simulation_on.clear()
+        if self.simulation.simulation_on.is_set():
+            self.simulation.simulation_on.clear()
             await ctx.send("Simulation ended.")
         else:
             if not cp.get_channel(ctx.guild.id, cp.SIMULATION_KEY):
                 await ctx.send("No channel set for simulation. "
                                "Please set the channel using `$setsim [channel mention]`")
-            self.simulation_on.set()
+            self.simulation.simulation_on.set()
             await ctx.send("Simulation started.")
 
     @commands.command(aliases=['setsim'])
@@ -220,84 +214,8 @@ class Markov():
             await ctx.send(error_msg)
             return None
 
-    async def update_simulator(self):
-        """Updates the htz simulator."""
-        await self.bot.wait_until_ready()
-        bot_guild = self.bot.get_guild(config.DEFAULT_GUILD_ID)
-        bot_channel = bot_guild.get_channel(cp.get_channel(config.DEFAULT_GUILD_ID, cp.SIMULATION_KEY))
-        bot_self = bot_guild.me
-        while not self.bot.is_closed():
-            await self.simulation_on.wait()
-            # Fills the queue if empty, otherwise pops the first element
-            user_model = None
-            next_user = None
-            next_user_member = None
-            out = None
-
-            try:
-                while not out:
-                    while not user_model:
-                        if not self.simulator_queue:
-                            self.simulator_queue = mk.fill_simulator_queue()
-                        next_user = self.simulator_queue.pop(0)
-                        print(next_user)
-                        next_user_member = bot_guild.get_member(int(next_user))
-                        if not next_user_member:
-                            continue
-
-                        # Generates the model for the user and generates a sentence for that user.
-                        user_model = mk.generate_model([next_user])
-
-                    for _ in range(3):
-                        out = mk.generate_sentence(user_model, root=self.topic)
-                        if out:
-                            out = out.split(' ', 1)[1]
-                            break
-                    else:
-                        out = mk.generate_sentence(user_model)
-
-                    if not out:
-                        continue
-
-                    for userid, name in mk.NAMES.items():
-                        if name in out:
-                            self.simulator_queue.insert(random.randint(0, 2), userid)
-
-                    mentions = set([c for c in out[0].split(' ') if c[0:2] == '<@'])
-                    for mention in mentions:
-                        self.simulator_queue.insert(random.randint(0, 1), mention[2:])
-
-                    # Topic is last word of out, stripped of non-alphanumeric characters.
-                    self.topic = out.split()[-1]
-                    re.sub(r'\W+', '', self.topic)
-            except Exception as e:
-                print(e)
-                with open('debug.txt', 'a+') as f:
-                    f.write(str(e))
-
-            try:
-                # Posts that message to the SIMULATOR_CHANNEL
-
-                nick = next_user_member.nick
-                if not nick:
-                    nick = next_user_member.name
-                out = f'**{nick}**: {out}'
-                out = remove_mentions(out, bot_guild)
-
-                await bot_self.edit(nick=nick)
-                await bot_channel.send(out)
-            except Exception as e:
-                print(e)
-                with open('debug.txt', 'a+') as f:
-                    f.write(str(e))
-
-            self.total_simulation_messages += 1
-            if self.total_simulation_messages % 20 == 0:
-                self.topic = None
-
-            # Generate wait time and wait.
-            wait_time = mk.get_wait_time()
-            await asyncio.sleep(wait_time)
+    async def on_ready(self):
+        await self.simulation.run()
 
 
 def setup(bot):
