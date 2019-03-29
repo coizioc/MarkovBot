@@ -68,7 +68,7 @@ class MarkovThread(Thread):
         if not self.person_ids:
             return
 
-        msg, nick = generate_markov(self.person_ids, self.root)
+        msg, nick = generate_markov(self.person_ids, self.root, self.num)
 
         bot_self = self.ctx.guild.me
 
