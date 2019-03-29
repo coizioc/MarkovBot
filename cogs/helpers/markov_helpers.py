@@ -1,11 +1,11 @@
-import markovify
 import random
+
+import markovify
 import numpy as np
 
-import server_toggle as st
-
 import config
-from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE,\
+from cogs.helpers import server_toggle as st
+from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE, \
     MAX_NICKNAME_LENGTH, MAX_NUM_NAMES, MAX_MARKOV_ATTEMPTS
 
 DEFAULT_NAME = 'MarkovBot'
@@ -28,7 +28,7 @@ for line in RAW_NAMES:
 with open(USER_MODEL_FILE, 'r', encoding='utf-8-sig') as f:
     USER_MODEL = markovify.Text.from_json(f.read())
 
-with open(LINKS_FILE) as f:
+with open(LINKS_FILE, 'r', encoding='utf-8-sig') as f:
     LINKS = f.read().splitlines()
 
 

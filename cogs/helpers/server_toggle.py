@@ -59,6 +59,7 @@ def save_user_options(userid, user_dict):
 
 
 def toggle_server(userid, server):
+    """Toggles whether a user wants a server to appear in their Markov results."""
     user_dict = open_user_options(userid)
     server_added = False
     serverid = get_serverid(server)
@@ -71,3 +72,16 @@ def toggle_server(userid, server):
         server_added = True
     save_user_options(userid, user_dict)
     return server_added
+
+
+def toggle_markov(userid):
+    """Toggles whether a user wants to be in Markov chains."""
+    user_dict = open_user_options(userid)
+    markov_activated = False
+    if user_dict['markov']:
+        user_dict['markov'] = False
+    else:
+        user_dict['markov'] = True
+        markov_activated = True
+    save_user_options(userid, user_dict)
+    return markov_activated
