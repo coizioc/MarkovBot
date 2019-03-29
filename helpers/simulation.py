@@ -6,19 +6,7 @@ from threading import Thread
 import config
 from helpers import channel_permissions as cp
 from helpers import markov_helpers as mk
-
-
-def remove_mentions(msg, current_guild):
-    user_tags = set([c for c in msg.split(' ') if c[0:2] == '<@'])
-    for user_tag in user_tags:
-        id = int(re.sub('\D', '', user_tag))
-        username = current_guild.get_member(id)
-        if username is not None:
-            username = username.display_name
-            msg = msg.replace(user_tag, '@' + username)
-        elif user_tag in msg:
-            msg = msg.replace(user_tag, "@UNKNOWN_USER")
-    return msg
+from helpers.utility import remove_mentions
 
 
 class SimThread(Thread):
@@ -51,6 +39,8 @@ class SimThread(Thread):
                         if not self.sim_queue:
                             self.sim_queue = mk.fill_simulator_queue()
                         next_user = self.sim_queue.pop(0)
+                        if next_user in config.IGNORE_USERS:
+                            continue
                         print(next_user)
                         next_user_member = bot_guild.get_member(int(next_user))
                         if not next_user_member:

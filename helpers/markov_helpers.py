@@ -1,4 +1,6 @@
 import random
+from threading import Thread
+import re
 
 import markovify
 import numpy as np
@@ -7,6 +9,7 @@ import config
 from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE, \
     MAX_NICKNAME_LENGTH, MAX_NUM_NAMES, MAX_MARKOV_ATTEMPTS
 from helpers import server_toggle as st
+from helpers.utility import remove_mentions
 
 DEFAULT_NAME = 'MarkovBot'
 DESCRIPTION = "Bot that keeps tracks of when reactions are added/removed."
@@ -49,6 +52,46 @@ class AmbiguousInputError(Exception):
     def __init__(self, name, output):
         self.name = name
         self.output = output
+
+
+class MarkovThread(Thread):
+    def __init__(self, ctx, name_str, root, num=1):
+        Thread.__init__(self)
+        self.ctx = ctx
+        self.name_str = name_str
+        self.person_ids = None
+        self.root = root
+        self.num = num
+
+    async def run(self):
+        self.person_ids = await self.get_person_ids()
+        if not self.person_ids:
+            return
+
+        msg, nick = generate_markov(self.person_ids, self.root)
+
+        bot_self = self.ctx.guild.me
+
+        msg = remove_mentions(msg, self.ctx.guild)
+
+        await bot_self.edit(nick=nick)
+        await self.ctx.send(msg)
+
+    async def get_person_ids(self):
+        try:
+            return parse_names(self.ctx, self.name_str)
+        except TooManyInputsError as e:
+            error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
+            await self.ctx.send(error_msg)
+            return None
+        except NameNotFoundError as e:
+            error_msg = f'Name not found {e.name}.'
+            await self.ctx.send(error_msg)
+            return None
+        except AmbiguousInputError as e:
+            error_msg = f'{e.name} maps to multiple people: {e.output}.'
+            await self.ctx.send(error_msg)
+            return None
 
 
 def get_rand_link():
@@ -181,8 +224,23 @@ def parse_names(ctx, person):
                 if not current_name:
                     raise NameNotFoundError(name)
                 elif len(current_name) == 1:
+                    if not ctx.guild.get_member(current_name[0]):
+                        raise NameNotFoundError(name)
                     input_ids.append(current_name[0])
                 else:
                     raise AmbiguousInputError(name, [NAMES[userid] for userid in current_name])
     else:
         return input_ids
+
+
+def remove_mentions(msg, current_guild):
+    user_tags = set([c for c in msg.split(' ') if c[0:2] == '<@'])
+    for user_tag in user_tags:
+        userid = int(re.sub('\D', '', user_tag))
+        username = current_guild.get_member(userid)
+        if username is not None:
+            username = username.display_name
+            msg = msg.replace(user_tag, '@' + username)
+        elif user_tag in msg:
+            msg = msg.replace(user_tag, "@UNKNOWN_USER")
+    return msg

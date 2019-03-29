@@ -103,6 +103,15 @@ def parse_server(filename):
     print(f'Write time: {datetime.now() - begin_time}')
 
 
+def count_replies(filename):
+    serverid = get_serverid(filename)
+    if not serverid:
+        raise NameError("Server not found.")
+
+    with open(filename, 'r', encoding='utf-8-sig') as f:
+        server_json = ujson.load(f)
+
+
 if __name__ == '__main__':
-    file = 'wasd.json'
+    file = 'htz.json'
     parse_server(file)

@@ -1,4 +1,4 @@
-from cogs.helpers import channel_permissions as cp
+from helpers import channel_permissions as cp
 from discord.ext import commands
 from discord.ext.commands import has_permissions
 

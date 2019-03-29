@@ -8,6 +8,7 @@ from config import MAX_NUM_NAMES
 from helpers import markov_helpers as mk
 from helpers import server_toggle as st, channel_permissions as cp, simulation as sim
 from helpers.markov_helpers import REFLEXIVE_TAG, INCLUSIVE_TAG, NAMES
+from helpers.utility import remove_mentions
 
 
 def has_post_permission(guildid, channelid):
@@ -33,19 +34,6 @@ def has_post_permission(guildid, channelid):
     return True
 
 
-def remove_mentions(msg, current_guild):
-    user_tags = set([c for c in msg.split(' ') if c[0:2] == '<@'])
-    for user_tag in user_tags:
-        id = int(re.sub('\D', '', user_tag))
-        username = current_guild.get_member(id)
-        if username is not None:
-            username = username.display_name
-            msg = msg.replace(user_tag, '@' + username)
-        elif user_tag in msg:
-            msg = msg.replace(user_tag, "@UNKNOWN_USER")
-    return msg
-
-
 class Markov():
     def __init__(self, bot):
         self.bot = bot
@@ -55,77 +43,25 @@ class Markov():
     async def do(self, ctx, person=REFLEXIVE_TAG, root=None):
         """Creates a Markov sentence based off of a user."""
         if has_post_permission(ctx.guild.id, ctx.channel.id):
-            if person == REFLEXIVE_TAG:
-                person = person.replace(REFLEXIVE_TAG, ctx.author.name)
-            person_ids = await self.get_person_ids(ctx, person)
-            if not person_ids:
-                return
-
-            msg, nick = mk.generate_markov(person_ids, root)
-
-            current_guild = ctx.guild
-            bot_self = current_guild.me
-
-            msg = remove_mentions(msg, current_guild)
-
-            if person == INCLUSIVE_TAG:
-                nick = ctx.guild.name.title()
-            await bot_self.edit(nick=nick)
-            await ctx.send(msg)
+            await mk.MarkovThread(ctx, person, root).run()
 
     @commands.command()
     async def domulti(self, ctx, num=1, person=REFLEXIVE_TAG, root=None):
         if has_post_permission(ctx.guild.id, ctx.channel.id):
             if type(num) != int:
                 await ctx.send(f'{num} is not a number.')
+                return
             if num > 10:
                 num = 10
             if num < 1:
                 num = 1
 
-            if person == 'htz':
-                person = INCLUSIVE_TAG
-            if person == REFLEXIVE_TAG:
-                person = person.replace(REFLEXIVE_TAG, ctx.author.name)
-            person_ids = await self.get_person_ids(ctx, person)
-            if not person_ids:
-                return
-
-            msg, nick = mk.generate_markov(person_ids, root, num=num)
-
-            current_guild = ctx.guild
-            bot_self = current_guild.me
-
-            msg = remove_mentions(msg, current_guild)
-
-            if person == INCLUSIVE_TAG:
-                nick = ctx.guild.name.title()
-            await bot_self.edit(nick=nick)
-            await ctx.send(msg)
+                await mk.MarkovThread(ctx, person, root, num).run()
 
     @commands.command()
     async def do10(self, ctx, person=REFLEXIVE_TAG, root=None):
         if has_post_permission(ctx.guild.id, ctx.channel.id):
-            if person == 'htz':
-                person = INCLUSIVE_TAG
-            if person == REFLEXIVE_TAG:
-                person = person.replace(REFLEXIVE_TAG, ctx.author.name)
-
-            person_ids = await self.get_person_ids(ctx, person)
-            if not person_ids:
-                return
-
-            msg, nick = mk.generate_markov(person_ids, root, num=10)
-
-            current_guild = ctx.guild
-            bot_self = current_guild.me
-
-            msg = remove_mentions(msg, current_guild)
-
-            if person == INCLUSIVE_TAG:
-                nick = ctx.guild.name.title()
-            await bot_self.edit(nick=nick)
-            await ctx.send(msg)
+            await mk.MarkovThread(ctx, person, root, num=10).run()
 
     @commands.command()
     async def list(self, ctx, search=None):
