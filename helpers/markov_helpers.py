@@ -4,9 +4,9 @@ import markovify
 import numpy as np
 
 import config
-from cogs.helpers import server_toggle as st
 from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE, \
     MAX_NICKNAME_LENGTH, MAX_NUM_NAMES, MAX_MARKOV_ATTEMPTS
+from helpers import server_toggle as st
 
 DEFAULT_NAME = 'MarkovBot'
 DESCRIPTION = "Bot that keeps tracks of when reactions are added/removed."
