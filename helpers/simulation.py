@@ -32,7 +32,6 @@ class SimThread(Thread):
             next_user = None
             next_user_member = None
             out = None
-
             try:
                 while not out:
                     while not user_model:
@@ -75,7 +74,7 @@ class SimThread(Thread):
                 print(e)
                 with open('debug.txt', 'a+') as f:
                     f.write(str(e))
-
+            
             try:
                 # Posts that message to the SIMULATOR_CHANNEL
 
@@ -99,3 +98,4 @@ class SimThread(Thread):
             # Generate wait time and wait.
             wait_time = mk.get_wait_time()
             await asyncio.sleep(wait_time)
+

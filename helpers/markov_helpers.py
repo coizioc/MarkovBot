@@ -224,7 +224,7 @@ def parse_names(ctx, person):
                 if not current_name:
                     raise NameNotFoundError(name)
                 elif len(current_name) == 1:
-                    if not ctx.guild.get_member(current_name[0]):
+                    if not ctx.guild.get_member(int(current_name[0])):
                         raise NameNotFoundError(name)
                     input_ids.append(current_name[0])
                 else:

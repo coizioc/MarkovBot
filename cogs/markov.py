@@ -34,7 +34,7 @@ def has_post_permission(guildid, channelid):
     return True
 
 
-class Markov():
+class Markov(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.simulation = sim.SimThread(bot)
@@ -114,12 +114,14 @@ class Markov():
     @has_permissions(manage_guild=True)
     async def togglesim(self, ctx):
         if self.simulation.simulation_on.is_set():
+            print("ending sim")
             self.simulation.simulation_on.clear()
             await ctx.send("Simulation ended.")
         else:
             if not cp.get_channel(ctx.guild.id, cp.SIMULATION_KEY):
                 await ctx.send("No channel set for simulation. "
                                "Please set the channel using `$setsim [channel mention]`")
+            print("Starting sim")
             self.simulation.simulation_on.set()
             await ctx.send("Simulation started.")
 
@@ -150,6 +152,7 @@ class Markov():
             await ctx.send(error_msg)
             return None
 
+    @commands.Cog.listener()
     async def on_ready(self):
         await self.simulation.run()
 
