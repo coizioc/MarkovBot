@@ -46,7 +46,7 @@ class SimThread(Thread):
                             continue
 
                         # Generates the model for the user and generates a sentence for that user.
-                        user_model = mk.generate_model([next_user])
+                        user_model = mk.generate_model([next_user], user_servers=[config.DEFAULT_GUILD_ID])
 
                     for _ in range(3):
                         out = mk.generate_sentence(user_model, root=self.topic)

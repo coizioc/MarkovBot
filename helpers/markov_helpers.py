@@ -178,13 +178,14 @@ def get_wait_time():
     return wait_time
 
 
-def generate_model(userids):
+def generate_model(userids, user_servers=None):
     """Generates a Markov model from a list of Member objects."""
     models = []
     for userid in userids:
-        user_servers = st.get_user_servers(userid)
         if not user_servers:
-            continue
+            user_servers = st.get_user_servers(userid)
+            if not user_servers:
+                continue
         for server in user_servers:
             try:
                 with open(f'{MODELS_DIRECTORY}{server}/{userid}.json', 'r', encoding='utf-8-sig') as json_file:
