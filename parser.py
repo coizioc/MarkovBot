@@ -1,3 +1,4 @@
+import os
 import ujson
 
 from config import MESSAGES_DIRECTORY, NAMES_FILE, SERVERS_FILE
@@ -49,6 +50,8 @@ def parse_server(filename):
         server_json = ujson.load(f)
 
     # Initialize the files for each user.
+    if not os.path.isdir(f"{MESSAGES_DIRECTORY}{serverid}/"):
+        os.mkdir(f'{MESSAGES_DIRECTORY}{serverid}/')
     userids = list(server_json['meta']['userindex'])
     for user_id in userids:
         with open(f'{MESSAGES_DIRECTORY}{serverid}/{user_id}.txt', 'w+', encoding='utf-8-sig') as f:
@@ -113,5 +116,5 @@ def count_replies(filename):
 
 
 if __name__ == '__main__':
-    file = 'htz.json'
+    file = 'memers.json'
     parse_server(file)

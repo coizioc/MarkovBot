@@ -1,14 +1,10 @@
-import re
-
 from discord.ext import commands
-from discord.ext.commands import has_permissions
 
 from config import MAX_MESSAGE_LENGTH
 from config import MAX_NUM_NAMES
 from helpers import markov_helpers as mk
 from helpers import server_toggle as st, channel_permissions as cp, simulation as sim
-from helpers.markov_helpers import REFLEXIVE_TAG, INCLUSIVE_TAG, NAMES
-from helpers.utility import remove_mentions
+from helpers.markov_helpers import REFLEXIVE_TAG, NAMES
 
 
 def has_post_permission(guildid, channelid):
@@ -110,32 +106,6 @@ class Markov(commands.Cog):
                 out = st.list_servers(ctx.author.id)
                 await ctx.send(out)
 
-    @commands.command()
-    @has_permissions(manage_guild=True)
-    async def togglesim(self, ctx):
-        if self.simulation.simulation_on.is_set():
-            print("ending sim")
-            self.simulation.simulation_on.clear()
-            await ctx.send("Simulation ended.")
-        else:
-            if not cp.get_channel(ctx.guild.id, cp.SIMULATION_KEY):
-                await ctx.send("No channel set for simulation. "
-                               "Please set the channel using `$setsim [channel mention]`")
-            print("Starting sim")
-            self.simulation.simulation_on.set()
-            await ctx.send("Simulation started.")
-
-    @commands.command(aliases=['setsim'])
-    @has_permissions(manage_guild=True)
-    async def setsimulator(self, ctx):
-        """Sets the default simulation channel."""
-        channel_mentions = ctx.message.channel_mentions
-
-        if channel_mentions:
-            simulation_channel = channel_mentions[0]
-            cp.set_channel(ctx.guild.id, simulation_channel.id, cp.SIMULATION_KEY)
-            await ctx.send(f"{simulation_channel.name} set as simulation channel.")
-
     async def get_person_ids(self, ctx, person):
         try:
             return mk.parse_names(ctx, person)
@@ -151,10 +121,6 @@ class Markov(commands.Cog):
             error_msg = f'{e.name} maps to multiple people: {e.output}.'
             await ctx.send(error_msg)
             return None
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        await self.simulation.run()
 
 
 def setup(bot):
