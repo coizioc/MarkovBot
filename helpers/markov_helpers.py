@@ -75,7 +75,10 @@ class MarkovThread(Thread):
         msg = remove_mentions(msg, self.ctx.guild)
 
         # await bot_self.edit(nick=nick)
-        await self.ctx.send(f'**{nick}**: {msg}')
+        if self.num > 1:
+            await self.ctx.send(f'**{nick}**:\n{msg}')
+        else:
+            await self.ctx.send(f'**{nick}**: {msg}')
 
     async def get_person_ids(self):
         try:
