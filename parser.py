@@ -116,5 +116,5 @@ def count_replies(filename):
 
 
 if __name__ == '__main__':
-    file = 'memers.json'
+    file = 'rrunescape.json'
     parse_server(file)

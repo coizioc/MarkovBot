@@ -52,7 +52,7 @@ class Markov(commands.Cog):
             if num < 1:
                 num = 1
 
-                await mk.MarkovThread(ctx, person, root, num).run()
+            await mk.MarkovThread(ctx, person, root, num).run()
 
     @commands.command()
     async def do10(self, ctx, person=REFLEXIVE_TAG, root=None):

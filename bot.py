@@ -51,10 +51,10 @@ class MarkovBot(commands.Bot):
         """Runs the bot with the token from the config file."""
         super().run(self.token, reconnect=True)
 
-    async def on_member_update(self, before, after):
-        """Resets bot's nickname anytime it is changed."""
-        if before.id == self.user.id and before.nick != after.nick:
-            await after.edit(nick=self.default_nick)
+    # async def on_member_update(self, before, after):
+    #     """Resets bot's nickname anytime it is changed."""
+    #     if before.id == self.user.id and before.nick != after.nick:
+    #         await after.edit(nick=self.default_nick)
 
     @commands.command()
     @commands.is_owner()
