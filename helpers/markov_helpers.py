@@ -1,12 +1,11 @@
 import random
 from threading import Thread
-import re
 
 import markovify
 import numpy as np
 
-import config
-from config import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE, \
+import consts
+from consts import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE, \
     MAX_NICKNAME_LENGTH, MAX_NUM_NAMES, MAX_MARKOV_ATTEMPTS
 from helpers import server_toggle as st
 from helpers.utility import remove_mentions
@@ -31,8 +30,11 @@ for line in RAW_NAMES:
 with open(USER_MODEL_FILE, 'r', encoding='utf-8-sig') as f:
     USER_MODEL = markovify.Text.from_json(f.read())
 
-with open(LINKS_FILE, 'r', encoding='utf-8-sig') as f:
-    LINKS = f.read().splitlines()
+try:
+    with open(LINKS_FILE, 'r', encoding='utf-8-sig') as f:
+        LINKS = f.read().splitlines()
+except FileNotFoundError:
+    LINKS = None
 
 
 class TooManyInputsError(Exception):
@@ -173,9 +175,9 @@ def fill_simulator_queue():
     return users
 
 
-def get_wait_time():
+def get_wait_time(avg, stddev):
     """Gets the wait time between messages in the htz simulator."""
-    wait_time = np.random.normal(config.POST_AVG, config.POST_STDDEV)
+    wait_time = np.random.normal(avg, stddev)
     if wait_time < 1:
         wait_time = 1
     return wait_time
@@ -237,14 +239,18 @@ def parse_names(ctx, person):
         return input_ids
 
 
-def remove_mentions(msg, current_guild):
-    user_tags = set([c for c in msg.split(' ') if c[0:2] == '<@'])
-    for user_tag in user_tags:
-        userid = int(re.sub('\D', '', user_tag))
-        username = current_guild.get_member(userid)
-        if username is not None:
-            username = username.display_name
-            msg = msg.replace(user_tag, '@' + username)
-        elif user_tag in msg:
-            msg = msg.replace(user_tag, "@UNKNOWN_USER")
-    return msg
+def print_names(ctx, search=None):
+    messages = []
+    curr_message = ""
+    for member in ctx.guild.members:
+        if str(member.id) in NAMES.keys():
+            curr_name = NAMES[str(member.id)]
+            if search:
+                if search.lower() not in curr_name.lower():
+                    continue
+            if len(curr_message) + len(curr_name) >= consts.MAX_MESSAGE_LENGTH:
+                messages.append(curr_message[:-2])
+            curr_message += curr_name + ', '
+    else:
+        messages.append(curr_message[:-2])
+    return messages
