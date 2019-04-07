@@ -9,14 +9,15 @@ from discord.ext import commands
 import config
 import consts
 from helpers.markov_helpers import get_wait_time
-from helpers.utility import remove_mentions
+from helpers.utility import remove_mentions, get_sim_model
 
-with open('bots.json', 'r', encoding='utf-8-sig') as f:
-    BOTS = ujson.load(f)
+try:
+    with open('bots.json', 'r', encoding='utf-8-sig') as f:
+        BOTS = ujson.load(f)
+except FileNotFoundError:
+    BOTS = None
 
-with open('htz_user_model.json', 'r', encoding='utf-8-sig') as f:
-    USER_MODEL = markovify.NewlineText.from_json(f.read())
-
+SIM_MODEL = get_sim_model(serverid=465791490526937088)
 
 POST_AVG = 25
 POST_STDDEV = 10
@@ -57,7 +58,10 @@ class MarkovSimulator(commands.Bot):
         return model
 
     def fill_queue(self):
-        self.queue = USER_MODEL.make_sentence().split(' ')
+        out = ''
+        while not out:
+            out = SIM_MODEL.make_sentence()
+        self.queue = out.split(' ')
 
     def get_model(self, userid):
         try:
@@ -116,13 +120,6 @@ class MarkovSimulator(commands.Bot):
 
             wait_time = get_wait_time(self.avg, self.stddev)
             await asyncio.sleep(wait_time)
-
-
-def print_links():
-    for userid in BOTS.keys():
-        if BOTS[userid]['client']:
-            print(f"{BOTS[userid]['names'][0]}: "
-                  f"https://discordapp.com/oauth2/authorize?client_id={BOTS[userid]['client']}&scope=bot&permissions=0")
 
 
 if __name__ == '__main__':

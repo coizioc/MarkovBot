@@ -1,6 +1,8 @@
 import re
+import markovify
 import ujson
 
+from config import SIMULATOR_GUILD
 from consts import SERVERS_FILE, SERVER_JSON_DIRECTORY
 
 
@@ -47,3 +49,29 @@ def remove_mentions(msg, current_guild):
         elif user_tag in msg:
             msg = msg.replace(user_tag, "@UNKNOWN_USER")
     return msg
+
+
+def get_sim_model(serverid=None):
+    """
+    Gets the simulator model using the SIMULATOR_GUILD id given in config.py
+    :return: the simulator Markov model.
+    """
+    with open(SERVERS_FILE, 'r', encoding='utf-8') as f:
+        server_lines = f.read().splitlines()
+
+    if not serverid:
+        serverid = SIMULATOR_GUILD
+
+    for line in server_lines:
+        if str(serverid) in line:
+            sim_guild_name = line.split(';')[1]
+            break
+    else:
+        raise NameError(f"Server with id {SIMULATOR_GUILD} not found in servers.txt.")
+
+    try:
+        with open(f'{sim_guild_name}_sim_model.json', 'r', encoding='utf-8-sig') as f:
+            sim_model = markovify.NewlineText.from_json(f.read())
+            return sim_model
+    except FileNotFoundError:
+        raise FileNotFoundError(f'{sim_guild_name}_sim_model.json')

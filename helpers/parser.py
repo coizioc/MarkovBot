@@ -26,12 +26,16 @@ def gen_simmodel(filename):
     userids = list(server_json['meta']['userindex'])
 
     out = ''
+    channel_num = 1
+    num_channels = len(server_json['data'].keys())
     for channel in server_json['data'].keys():
+        print(f"Parsing channel {channel_num}/{num_channels}...")
         for message in server_json['data'][channel].keys():
             out += userids[int(server_json['data'][channel][message]['u'])] + ' '
             if len(out) > 1000:
                 out += '\n'
-    sim_model = markovify.NewlineText(out)
+        channel_num += 1
+    sim_model = markovify.NewlineText(out, retain_original=False)
     with open(f'{server_name}_sim_model.json', 'w+') as f:
         f.write(sim_model.to_json())
     print(f'{server_name}_sim_model.json successfully written!')
