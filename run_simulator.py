@@ -81,6 +81,8 @@ class MarkovSimulator(commands.Bot):
             if not self.queue:
                 self.fill_queue()
             curr_userid = self.queue.pop(0)
+            if int(curr_userid) in config.IGNORE_USERS:
+                continue
             next_user_member = bot_guild.get_member(int(curr_userid))
             if not next_user_member:
                 continue
@@ -89,8 +91,8 @@ class MarkovSimulator(commands.Bot):
             if not model:
                 continue
 
-            for userid in NAMES_IN_MSG:
-                self.queue.insert(np.random.randint(0, 2), userid)
+            # for userid in NAMES_IN_MSG:
+            #     self.queue.insert(np.random.randint(0, 2), userid)
 
             for _ in range(3):
                 if self.topic:
@@ -109,7 +111,7 @@ class MarkovSimulator(commands.Bot):
 
             if msg:
                 self.topic = msg.split(' ')[-1]
-                find_names(msg)
+                # find_names(msg)
                 msg = remove_mentions(msg, bot_guild)
                 nick = next_user_member.nick
                 if not nick:
