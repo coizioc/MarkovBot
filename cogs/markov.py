@@ -42,6 +42,7 @@ class Markov(commands.Cog):
 
     @commands.command()
     async def domulti(self, ctx, num=1, person=REFLEXIVE_TAG, root=None):
+        """Creates multiple Markov sentences (up to 10)."""
         if has_post_permission(ctx.guild.id, ctx.channel.id):
             if type(num) != int:
                 await ctx.send(f'{num} is not a number.')
@@ -55,6 +56,7 @@ class Markov(commands.Cog):
 
     @commands.command()
     async def do10(self, ctx, person=REFLEXIVE_TAG, root=None):
+        """Creates 10 Markov sentences."""
         if has_post_permission(ctx.guild.id, ctx.channel.id):
             await mk.MarkovThread(ctx, person, root, num=10).run()
 
@@ -63,7 +65,6 @@ class Markov(commands.Cog):
         """Prints a list of everyone who has a Markov model."""
         if has_post_permission(ctx.guild.id, ctx.channel.id):
             messages = mk.print_names(ctx, search)
-            print(len(messages))
             if len(messages) > 5:
                 await ctx.send("List too long/too broad search. Please provide a more specific search.")
             elif len(messages) > 1:
@@ -81,7 +82,7 @@ class Markov(commands.Cog):
 
     @commands.command()
     async def toggle(self, ctx, server=None):
-        """Lists/Toggles servers from which you want the bot to pull Markov chains."""
+        """Lists/Toggles servers you want the bot to pull from."""
         if has_post_permission(ctx.guild.id, ctx.channel.id):
             if server:
                 if not st.is_server(server):

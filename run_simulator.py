@@ -17,7 +17,7 @@ try:
 except FileNotFoundError:
     BOTS = None
 
-SIM_MODEL = get_sim_model(serverid=465791490526937088)
+SIM_MODEL = get_sim_model()
 
 POST_AVG = 25
 POST_STDDEV = 10

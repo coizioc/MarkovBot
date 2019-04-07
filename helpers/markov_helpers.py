@@ -19,7 +19,7 @@ REFLEXIVE_TAG = 'me'
 BEGIN_TAG = 'BEGIN_LINE'
 END_TAG = 'END_LINE'
 
-with open(NAMES_FILE, 'r', encoding='utf-8') as f:
+with open(NAMES_FILE, 'r', encoding='utf-8-sig') as f:
     RAW_NAMES = f.read().splitlines()
 
 NAMES = {}
@@ -207,6 +207,7 @@ def parse_names(ctx, person):
     """Retrieves a string of names and converts them into a list of userids."""
     namelist = person.lower().split('+')
     num_names = len(namelist)
+    guild_ids = [x.id for x in ctx.guild.members]
     if num_names > MAX_NUM_NAMES:
         raise TooManyInputsError(num_names)
     input_ids = []
@@ -221,6 +222,8 @@ def parse_names(ctx, person):
             input_ids.append(str(ctx.author.id))
         else:
             for userid in NAMES.keys():
+                if int(userid) not in guild_ids:
+                    continue
                 if name.lower() == NAMES[userid].lower():
                     input_ids.append(userid)
                     break
