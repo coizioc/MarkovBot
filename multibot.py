@@ -16,6 +16,7 @@ with open('bots.json', 'r', encoding='utf-8-sig') as f:
 with open('htz_user_model.json', 'r', encoding='utf-8-sig') as f:
     USER_MODEL = markovify.NewlineText.from_json(f.read())
 
+# TODO
 
 FINISH_POST_SIGNAL = asyncio.Event()
 NAMES_IN_MSG = []
@@ -75,7 +76,7 @@ class MarkovBot(commands.Bot):
         self.post_signal = asyncio.Event()
 
     def open_model(self, userid):
-        with open(f'{config.MODELS_DIRECTORY}{config.HTZ_GUILD}/{userid}.json', 'r', encoding='utf-8-sig') as f:
+        with open(f'{config.MODELS_DIRECTORY}{config.SIMULATOR_GUILD}/{userid}.json', 'r', encoding='utf-8-sig') as f:
             model = markovify.Text.from_json(f.read())
         return model
 

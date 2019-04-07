@@ -1,6 +1,8 @@
 import ujson
+import os
 
-from config import SERVERS_FILE, OPTIONS_DIRECTORY
+import consts
+from consts import SERVERS_FILE, OPTIONS_DIRECTORY
 
 with open(SERVERS_FILE, 'r', encoding='utf-8') as f:
     RAW_SERVERS = f.read().splitlines()
@@ -36,10 +38,11 @@ def list_servers(userid):
     out = 'List of MarkovBot Servers:\n'
     user_servers = get_user_servers(userid)
     for server_id, name in SERVERS.items():
-        if user_servers and server_id in user_servers:
-            out += f'**{name}**\n'
-        else:
-            out += name + '\n'
+        if os.path.isfile(f'{consts.MODELS_DIRECTORY}{server_id}/{userid}.json'):
+            if user_servers and server_id in user_servers:
+                out += f'**{name}**\n'
+            else:
+                out += name + '\n'
     out += '**Bolded** servers have been toggled on. To toggle a specific server, type `$toggle <server>`.'
     return out
 

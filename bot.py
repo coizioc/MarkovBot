@@ -4,7 +4,7 @@ import os
 from discord.ext import commands
 
 import config
-from config import DESCRIPTION, DEFAULT_NAME
+from consts import DESCRIPTION, DEFAULT_NAME
 
 log = logging.getLogger(__name__)
 
@@ -36,10 +36,7 @@ class MarkovBot(commands.Bot):
 
     async def on_ready(self):
         """Prints bot initialization info"""
-        logging.info('Logged in as')
-        logging.info(self.user.name)
-        logging.info(self.user.id)
-        logging.info('------')
+        print(f"Logged in as {self.user.name}, id {self.user.id}.")
 
     async def on_message(self, message):
         """Handles commands based on messages sent"""

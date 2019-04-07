@@ -1,6 +1,6 @@
 import ujson
 
-from config import CHANNEL_PERMISSIONS_JSON
+from consts import CHANNEL_PERMISSIONS_JSON
 
 WHITELIST_KEY = 'white'            # list containing all channels in a guild in which the bot can run commands.
 BLACKLIST_KEY = 'black'            # list containing all channels in a guild in which the bot cannot run commands.

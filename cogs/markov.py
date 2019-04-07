@@ -1,10 +1,9 @@
 from discord.ext import commands
 
-from config import MAX_MESSAGE_LENGTH
-from config import MAX_NUM_NAMES
+from consts import MAX_NUM_NAMES
 from helpers import markov_helpers as mk
 from helpers import server_toggle as st, channel_permissions as cp, simulation as sim
-from helpers.markov_helpers import REFLEXIVE_TAG, NAMES
+from helpers.markov_helpers import REFLEXIVE_TAG
 
 
 def has_post_permission(guildid, channelid):
@@ -63,24 +62,15 @@ class Markov(commands.Cog):
     async def list(self, ctx, search=None):
         """Prints a list of everyone who has a Markov model."""
         if has_post_permission(ctx.guild.id, ctx.channel.id):
-            out = []
-            message = ''
-            for name in NAMES.values():
-                if search:
-                    if search.lower() not in name.lower():
-                        continue
-                if len(message) + len(name) < MAX_MESSAGE_LENGTH:
-                    message += name + ', '
-                else:
-                    out.append(message[:-2])
-                    message = name + ', '
-            else:
-                out.append(message[:-2])
-            if len(out) > 1:
-                for msg in out:
+            messages = mk.print_names(ctx, search)
+            print(len(messages))
+            if len(messages) > 5:
+                await ctx.send("List too long/too broad search. Please provide a more specific search.")
+            elif len(messages) > 1:
+                for msg in messages:
                     await ctx.author.send(msg)
             else:
-                for msg in out:
+                for msg in messages:
                     await ctx.send(msg)
 
     @commands.command(aliases=['linkme', 'randlink', 'lonk'])
