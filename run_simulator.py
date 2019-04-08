@@ -82,7 +82,7 @@ class MarkovSimulator(commands.Bot):
         if self.do_setup:
             await setuph.setup_server(bot_channel)
         else:
-            self.do_sim(bot_guild, bot_channel)
+            await self.do_sim(bot_guild, bot_channel)
 
     async def do_sim(self, bot_guild, bot_channel):
         while True:
