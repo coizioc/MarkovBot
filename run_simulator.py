@@ -9,6 +9,7 @@ from discord.ext import commands
 import config
 import consts
 from helpers.markov_helpers import get_wait_time
+import helpers.setup_helpers as setuph
 from helpers.utility import remove_mentions, get_sim_model
 
 try:
@@ -35,18 +36,21 @@ def find_names(msg):
 
 class MarkovSimulator(commands.Bot):
     def __init__(self, args):
-        super().__init__(command_prefix="mk!", description="hi dere")
+        super().__init__(command_prefix="mk$", description="Simulator for MarkovBot.")
         self.token = config.sim_token
-        self.topic = None
-        self.queue = []
-        if args.post_avg:
-            self.avg = args.post_avg
-        else:
-            self.avg = POST_AVG
-        if args.post_stddev:
-            self.stddev = args.post_stddev
-        else:
-            self.stddev = POST_STDDEV
+        self.do_setup = args.do_setup
+        if not args.do_setup:
+            self.topic = None
+            self.queue = []
+
+            if args.post_avg:
+                self.avg = args.post_avg
+            else:
+                self.avg = POST_AVG
+            if args.post_stddev:
+                self.stddev = args.post_stddev
+            else:
+                self.stddev = POST_STDDEV
 
     def run(self):
         """Runs the bot with the token from the config file."""
@@ -75,6 +79,12 @@ class MarkovSimulator(commands.Bot):
         bot_guild = self.get_guild(config.SIMULATOR_GUILD)
         bot_channel = bot_guild.get_channel(config.SIMULATOR_CHANNEL)
         print(f'Running bot on guild: {bot_guild}\nchannel: {bot_channel}')
+        if self.do_setup:
+            await setuph.setup_server(bot_channel)
+        else:
+            self.do_sim(bot_guild, bot_channel)
+
+    async def do_sim(self, bot_guild, bot_channel):
         while True:
             next_user_member = None
             # Pop next poster from queue
@@ -123,10 +133,9 @@ class MarkovSimulator(commands.Bot):
 
 
 if __name__ == '__main__':
-    # TODO add setup code
     parser = argparse.ArgumentParser(description='Server simulator for MarkovBot.')
-    # parser.add_argument('--setup', dest='do_setup', action='store_true',
-    #                     help="Boots the simulator in setup mode.")
+    parser.add_argument('--update', dest='do_setup', action='store_true',
+                        help="Updates/Creates the server json for the simulator server.")
     parser.add_argument('--avg', dest='post_avg', type=int, nargs=1,
                         help=f"The average time between posts (default: {POST_AVG})")
     parser.add_argument('--stddev', dest='post_stddev', type=int, nargs=1,
