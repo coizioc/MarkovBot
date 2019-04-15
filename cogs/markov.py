@@ -29,7 +29,7 @@ def has_post_permission(guildid, channelid):
     return True
 
 
-class Markov(commands.Cog):
+class Markov():
     def __init__(self, bot):
         self.bot = bot
         self.simulation = sim.SimThread(bot)
@@ -73,6 +73,12 @@ class Markov(commands.Cog):
             else:
                 for msg in messages:
                     await ctx.send(msg)
+
+    @commands.command(aliases=['sent'])
+    async def sentiment(self, ctx, name):
+        if has_post_permission(ctx.guild.id, ctx.channel.id):
+            msg = await mk.get_sentiment_analysis(ctx, name)
+            await ctx.send(msg)
 
     @commands.command(aliases=['linkme', 'randlink', 'lonk'])
     async def random_link(self, ctx):

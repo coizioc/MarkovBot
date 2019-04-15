@@ -13,6 +13,7 @@ SERVERS_FILE = 'servers.txt'
 USER_MODEL_FILE = 'htz_user_model.json'
 LINKS_FILE = 'links.txt'
 CHANNEL_PERMISSIONS_JSON = 'channelperms.json'
+SENTIMENT_ANALYSIS_JSON = 'sentiments.json'
 
 # Discord/Bot constants
 DEFAULT_NAME = 'MarkovBot'
@@ -22,3 +23,4 @@ MAX_MESSAGE_LENGTH = 1800
 MAX_MARKOV_ATTEMPTS = 10
 MAX_NICKNAME_LENGTH = 30
 MAX_NUM_NAMES = 5
+MAX_SENTIMENT_TEXT_LENGTH = 50000

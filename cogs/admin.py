@@ -29,7 +29,7 @@ def has_post_permission(guildid, channelid):
     return True
 
 
-class Admin(commands.Cog):
+class Admin():
     def __init__(self, bot):
         self.bot = bot
 
