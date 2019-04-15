@@ -3,7 +3,6 @@ import asyncio
 import ujson
 
 import markovify
-import numpy as np
 from discord.ext import commands
 
 import config
@@ -69,7 +68,7 @@ class MarkovSimulator(commands.Bot):
 
     def get_model(self, userid):
         try:
-            with open(f'models/465791490526937088/{userid}.json', 'r', encoding='utf-8-sig') as f:
+            with open(f'models/{config.SIMULATOR_GUILD}/{userid}.json', 'r', encoding='utf-8-sig') as f:
                 model = markovify.Text.from_json(f.read())
             return model
         except FileNotFoundError:

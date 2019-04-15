@@ -1,9 +1,12 @@
 import random
+import requests
 from threading import Thread
 
 import markovify
 import numpy as np
+import ujson
 
+from config import sentiment_token
 import consts
 from consts import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE, \
     MAX_NICKNAME_LENGTH, MAX_NUM_NAMES, MAX_MARKOV_ATTEMPTS
@@ -66,7 +69,7 @@ class MarkovThread(Thread):
         self.num = num
 
     async def run(self):
-        self.person_ids = await self.get_person_ids()
+        self.person_ids = await get_person_ids(self.ctx, self.name_str)
         if not self.person_ids:
             return
 
@@ -82,21 +85,22 @@ class MarkovThread(Thread):
         else:
             await self.ctx.send(f'**{nick}**: {msg}')
 
-    async def get_person_ids(self):
-        try:
-            return parse_names(self.ctx, self.name_str)
-        except TooManyInputsError as e:
-            error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
-            await self.ctx.send(error_msg)
-            return None
-        except NameNotFoundError as e:
-            error_msg = f'Name not found {e.name}.'
-            await self.ctx.send(error_msg)
-            return None
-        except AmbiguousInputError as e:
-            error_msg = f'{e.name} maps to multiple people: {e.output}.'
-            await self.ctx.send(error_msg)
-            return None
+
+async def get_person_ids(ctx, name_str):
+    try:
+        return parse_names(ctx, name_str)
+    except TooManyInputsError as e:
+        error_msg = f'Too many inputs ({e.number}). Max is {MAX_NUM_NAMES}.'
+        await ctx.send(error_msg)
+        return None
+    except NameNotFoundError as e:
+        error_msg = f'Name not found {e.name}.'
+        await ctx.send(error_msg)
+        return None
+    except AmbiguousInputError as e:
+        error_msg = f'{e.name} maps to multiple people: {e.output}.'
+        await ctx.send(error_msg)
+        return None
 
 
 def get_rand_link():
@@ -257,3 +261,56 @@ def print_names(ctx, search=None):
     else:
         messages.append(curr_message[:-2])
     return messages
+
+
+async def get_sentiment_analysis(ctx, name_str=None):
+    if name_str:
+        userids = await get_person_ids(ctx, name_str)
+        if not userids:
+            return
+    else:
+        userids = [str(ctx.author.id)]
+    userid = userids[0]
+
+    try:
+        with open(consts.SENTIMENT_ANALYSIS_JSON, 'r') as f:
+            sentiment_cache = ujson.load(f)
+    except FileNotFoundError:
+        sentiment_cache = {}
+
+    if userid not in sentiment_cache:
+        user_model = generate_model([userid])
+        if user_model is None:
+            return "Unable to create Markov model of author."
+
+        user_text = ""
+        while len(user_text) < consts.MAX_SENTIMENT_TEXT_LENGTH:
+            sentence = ""
+            while not sentence:
+                sentence = user_model.make_sentence()
+            user_text += sentence + '\n'
+
+        response = requests.post("https://japerk-text-processing.p.rapidapi.com/sentiment/",
+                                 headers={
+                                     "X-RapidAPI-Host": "japerk-text-processing.p.rapidapi.com",
+                                     "X-RapidAPI-Key": sentiment_token,
+                                     "Content-Type": "application/x-www-form-urlencoded"
+                                 },
+                                 data={
+                                     "language": "english",
+                                     "text": user_text
+                                 }
+                                 )
+        sentiment_cache[userid] = response.json()
+        with open(consts.SENTIMENT_ANALYSIS_JSON, 'w+') as f:
+            ujson.dump(sentiment_cache, f)
+
+    sentiment_data = sentiment_cache[userid]
+
+    msg = f"__**{NAMES[userid]}'s Sentiment Analysis**__\n" \
+          f"```Label: {sentiment_data['label']}\n\n" \
+          f"Probabilities:\nneg: {sentiment_data['probability']['neg']}\n" \
+          f"neutral: {sentiment_data['probability']['neutral']}\n" \
+          f"pos: {sentiment_data['probability']['pos']}```"
+
+    return msg
