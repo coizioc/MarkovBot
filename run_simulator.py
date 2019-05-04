@@ -1,15 +1,17 @@
 import argparse
 import asyncio
+import random
 import ujson
 
 import markovify
 from discord.ext import commands
+from discord import Embed
 
 import config
 import consts
-from helpers.markov_helpers import get_wait_time
 import helpers.setup_helpers as setuph
-from helpers.utility import remove_mentions, get_sim_model
+from helpers.markov_helpers import get_wait_time
+from helpers.utility import remove_mentions, get_sim_model, get_link
 
 try:
     with open('bots.json', 'r', encoding='utf-8-sig') as f:
@@ -126,6 +128,14 @@ class MarkovSimulator(commands.Bot):
                 if not nick:
                     nick = next_user_member.name
                 msg = f'**{nick}**: {msg}'
+                if random.random() < 0.04:
+                    e = Embed()
+                    while True:
+                        link = get_link()
+                        if 'discordapp' in link:
+                            break
+
+                    e.set_image(url=link)
 
                 await bot_channel.send(msg)
 

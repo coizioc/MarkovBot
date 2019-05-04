@@ -309,7 +309,8 @@ async def get_sentiment_analysis(ctx, name_str=None):
 
     msg = f"__**{NAMES[userid]}'s Sentiment Analysis**__\n" \
           f"```Label: {sentiment_data['label']}\n\n" \
-          f"Probabilities:\nneg: {sentiment_data['probability']['neg']}\n" \
+          f"Probabilities:\n" \
+          f"neg: {sentiment_data['probability']['neg']}\n" \
           f"neutral: {sentiment_data['probability']['neutral']}\n" \
           f"pos: {sentiment_data['probability']['pos']}```"
 

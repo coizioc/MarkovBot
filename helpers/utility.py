@@ -2,8 +2,10 @@ import re
 import markovify
 import ujson
 
+import random
+
 from config import SIMULATOR_GUILD
-from consts import SERVERS_FILE, SERVER_JSON_DIRECTORY
+from consts import SERVERS_FILE, SERVER_JSON_DIRECTORY, LINKS_FILE
 
 
 def get_serverid(filename):
@@ -75,3 +77,13 @@ def get_sim_model(serverid=None):
             return sim_model
     except FileNotFoundError:
         raise FileNotFoundError(f'{sim_guild_name}_sim_model.json')
+
+
+def get_link():
+    """
+    Returns a random link from the links file.
+    :return: str representing the link's url.
+    """
+    with open(LINKS_FILE, 'r', encoding='utf-8') as f:
+        links = f.read().splitlines()
+    return random.choice(links)
