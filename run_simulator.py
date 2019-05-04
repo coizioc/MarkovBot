@@ -92,7 +92,7 @@ class MarkovSimulator(commands.Bot):
             if not self.queue:
                 self.fill_queue()
             curr_userid = self.queue.pop(0)
-            if int(curr_userid) in config.IGNORE_USERS:
+            if curr_userid in config.IGNORE_USERS:
                 continue
             next_user_member = bot_guild.get_member(int(curr_userid))
             if not next_user_member:
