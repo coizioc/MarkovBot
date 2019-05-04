@@ -23,6 +23,7 @@ SIM_MODEL = get_sim_model()
 
 POST_AVG = 25
 POST_STDDEV = 10
+EMBED_RATE = 0.9
 NAMES_IN_MSG = []
 
 
@@ -52,6 +53,13 @@ class MarkovSimulator(commands.Bot):
                 self.stddev = args.post_stddev
             else:
                 self.stddev = POST_STDDEV
+            if args.embed:
+                if args.embed > 1 or args.embed < 0:
+                    print("Embed rate must be between 0 and 1.")
+                    exit()
+                self.embed_rate = args.embed
+            else:
+                self.embed_rate = EMBED_RATE
 
     def run(self):
         """Runs the bot with the token from the config file."""
@@ -128,7 +136,9 @@ class MarkovSimulator(commands.Bot):
                 if not nick:
                     nick = next_user_member.name
                 msg = f'**{nick}**: {msg}'
-                if random.random() < 0.04:
+
+                # Add image
+                if random.random() < self.embed_rate:
                     e = Embed()
                     while True:
                         link = get_link()
@@ -136,8 +146,9 @@ class MarkovSimulator(commands.Bot):
                             break
 
                     e.set_image(url=link)
-
-                await bot_channel.send(msg)
+                    await bot_channel.send(msg, embed=e)
+                else:
+                    await bot_channel.send(msg)
 
             wait_time = get_wait_time(self.avg, self.stddev)
             await asyncio.sleep(wait_time)
@@ -151,6 +162,8 @@ if __name__ == '__main__':
                         help=f"The average time between posts (default: {POST_AVG})")
     parser.add_argument('--stddev', dest='post_stddev', type=int, nargs=1,
                         help=f"The average standard deviation between posts (default {POST_STDDEV})")
+    parser.add_argument('--embed', dest='embed', type=float, nargs=1,
+                        help=f"Percent of posts that will contain images (default {EMBED_RATE})")
     args = parser.parse_args()
 
     MarkovSimulator(args).run()

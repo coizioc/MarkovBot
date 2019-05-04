@@ -2,6 +2,7 @@ import datetime
 import re
 import ujson
 
+from config import SIMULATOR_CHANNEL
 from consts import SERVERS_FILE, SERVER_JSON_DIRECTORY
 
 
@@ -37,12 +38,12 @@ def init_server_json(ctx):
 
 def get_last_message_timecode(server_json, channelid):
     if channelid in server_json['data'].keys():
-        earliest_timecode = datetime.datetime.utcnow().timestamp()
+        latest_timestamp = 946684800
         for message in server_json['data'][channelid].values():
-            curr_timecode = int(int(message['t']) / 1000)
-            if curr_timecode < earliest_timecode:
-                earliest_timecode = curr_timecode
-        return earliest_timecode
+            curr_timecode = int(message['t']) // 1000
+            if curr_timecode > latest_timestamp:
+                latest_timestamp = curr_timecode
+        return latest_timestamp
     else:
         return None
 
@@ -96,12 +97,13 @@ async def setup_server(ctx):
     curr_channel_num = 1
     num_channels = len(ctx.guild.text_channels)
     for channel in ctx.guild.text_channels:
+        if channel.id == SIMULATOR_CHANNEL:
+            print('Skipping simulator channel...')
+            continue
         if ctx.guild.me not in channel.members:
             print(f'Unable to scrape channel ({curr_channel_num}/{num_channels}) (Forbidden)...')
             curr_channel_num += 1
             continue
-
-        print(f'Scraping #{channel.name} ({curr_channel_num}/{num_channels})...')
 
         channelid = str(channel.id)
         if channelid not in server_json['meta']['channels'].keys():
@@ -109,9 +111,13 @@ async def setup_server(ctx):
             server_json['meta']['channels'][channelid] = channel_json
 
         last_message_timestamp = get_last_message_timecode(server_json, channelid)
-        last_message_datetime = datetime.datetime.fromtimestamp(last_message_timestamp)
+        if not last_message_timestamp:
+            last_message_datetime = None
+            server_json['data'][channelid] = {}
+        else:
+            last_message_datetime = datetime.datetime.fromtimestamp(last_message_timestamp)
 
-        server_json['data'][channelid] = {}
+        print(f'Scraping #{channel.name} ({curr_channel_num}/{num_channels}) after {last_message_datetime}...')
 
         async for message in channel.history(limit=None, after=last_message_datetime):
             message_author = message.author

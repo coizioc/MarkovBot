@@ -12,7 +12,7 @@ NAMES_FILE = 'names.txt'
 SERVERS_FILE = 'servers.txt'
 LINKS_FILE = 'links.txt'
 USER_MODEL_FILE = 'htz_user_model.json'
-LINKS_FILE = 'links.txt'
+LONKS_FILE = 'lonks.txt'
 CHANNEL_PERMISSIONS_JSON = 'channelperms.json'
 SENTIMENT_ANALYSIS_JSON = 'sentiments.json'
 

@@ -8,7 +8,7 @@ import ujson
 
 from config import sentiment_token
 import consts
-from consts import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE, \
+from consts import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LONKS_FILE, \
     MAX_NICKNAME_LENGTH, MAX_NUM_NAMES, MAX_MARKOV_ATTEMPTS
 from helpers import server_toggle as st
 from helpers.utility import remove_mentions
@@ -34,7 +34,7 @@ with open(USER_MODEL_FILE, 'r', encoding='utf-8-sig') as f:
     USER_MODEL = markovify.Text.from_json(f.read())
 
 try:
-    with open(LINKS_FILE, 'r', encoding='utf-8-sig') as f:
+    with open(LONKS_FILE, 'r', encoding='utf-8-sig') as f:
         LINKS = f.read().splitlines()
 except FileNotFoundError:
     LINKS = None
