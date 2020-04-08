@@ -21,8 +21,8 @@ class SimThread(Thread):
 
     async def run(self):
         await self.bot.wait_until_ready()
-        bot_guild = self.bot.get_guild(config.DEFAULT_GUILD_ID)
-        bot_channel = bot_guild.get_channel(cp.get_channel(config.DEFAULT_GUILD_ID, cp.SIMULATION_KEY))
+        bot_guild = self.bot.get_guild(config.SIMULATOR_GUILD)
+        bot_channel = bot_guild.get_channel(cp.get_channel(config.SIMULATOR_CHANNEL, cp.SIMULATION_KEY))
         bot_self = bot_guild.me
         print(f'Guild: {bot_guild.id}, Channel: {bot_channel.id}, Bot: {bot_self.id}')
         while not self.bot.is_closed():
@@ -46,7 +46,7 @@ class SimThread(Thread):
                             continue
 
                         # Generates the model for the user and generates a sentence for that user.
-                        user_model = mk.generate_model([next_user], user_servers=[config.DEFAULT_GUILD_ID])
+                        user_model = mk.generate_model([next_user], user_servers=[config.SIMULATOR_GUILD])
 
                     for _ in range(3):
                         out = mk.generate_sentence(user_model, root=self.topic)
@@ -81,11 +81,12 @@ class SimThread(Thread):
                 nick = next_user_member.nick
                 if not nick:
                     nick = next_user_member.name
-                out = f'**{nick}**: {out}'
                 out = remove_mentions(out, bot_guild)
 
-                await bot_self.edit(nick=nick)
-                await bot_channel.send(out)
+                webhook_avatar = await next_user_member.avatar_url.read()
+                webhook = await bot_channel.create_webhook(name=nick, avatar=webhook_avatar)
+                await webhook.send(out)
+                await webhook.delete()
             except Exception as e:
                 print(e)
                 with open('debug.txt', 'a+') as f:

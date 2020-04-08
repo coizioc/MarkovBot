@@ -18,24 +18,32 @@ def append_text(messages, serverid):
     print(f"Wrote in {datetime.now() - start_time}")
 
 
-def gen_simmodel(filename):
+# 7776000 = 90 days in seconds
+def gen_simmodel(filename, lookback=7776000):
     with open(f'{SERVER_JSON_DIRECTORY}{filename}', 'r', encoding='utf-8-sig') as f:
         server_json = ujson.load(f)
 
     server_name = filename[:-5]
     userids = list(server_json['meta']['userindex'])
 
+    msgs = []
     out = ''
     channel_num = 1
     num_channels = len(server_json['data'].keys())
     for channel in server_json['data'].keys():
         print(f"Parsing channel {channel_num}/{num_channels}...")
         for message in server_json['data'][channel].keys():
+            secs_posted_ago = datetime.now().timestamp() - int(server_json['data'][channel][message]['t']) / 1000
+            if secs_posted_ago > lookback:
+                continue
             out += userids[int(server_json['data'][channel][message]['u'])] + ' '
             if len(out) > 1000:
-                out += '\n'
+                msgs.append(out)
+                out = ''
+        msgs.append(out)
+        out = ''
         channel_num += 1
-    sim_model = markovify.NewlineText(out, retain_original=False)
+    sim_model = markovify.NewlineText('\n'.join(msgs), retain_original=False)
     with open(f'{server_name}_sim_model.json', 'w+') as f:
         f.write(sim_model.to_json())
     print(f'{server_name}_sim_model.json successfully written!')

@@ -1,7 +1,10 @@
+import random
+
 from discord.ext import commands
 
 from consts import MAX_NUM_NAMES
 from helpers import markov_helpers as mk
+from helpers import mk_fanfic as mkff
 from helpers import server_toggle as st, channel_permissions as cp, simulation as sim
 from helpers.markov_helpers import REFLEXIVE_TAG
 
@@ -29,7 +32,7 @@ def has_post_permission(guildid, channelid):
     return True
 
 
-class Markov():
+class Markov(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.simulation = sim.SimThread(bot)
@@ -102,6 +105,17 @@ class Markov():
             else:
                 out = st.list_servers(ctx.author.id)
                 await ctx.send(out)
+
+    @commands.command(aliases=['ff'])
+    async def fanfic(self, ctx, p1=None, p2=None, g1='m', g2='f'):
+        out = mkff.generate_fanfic(p1, p2, g1, g2)
+        await ctx.send(out)
+
+    @commands.command()
+    async def coiz(self, ctx):
+        with open('coizirl.txt', 'r') as f:
+            lines = f.read().splitlines()
+        await ctx.send(random.choice(lines))
 
     async def get_person_ids(self, ctx, person):
         try:
