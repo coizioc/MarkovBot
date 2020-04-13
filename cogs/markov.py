@@ -83,9 +83,22 @@ class Markov(commands.Cog):
     #         await ctx.send(msg)
 
     @commands.command(aliases=['linkme', 'randlink', 'lonk'])
-    async def random_link(self, ctx):
+    async def random_link(self, ctx, link):
         """Returns a random link."""
-        await ctx.send(mk.get_rand_link())
+        if link is None:
+            await ctx.send(mk.get_rand_link())
+        else:
+            if not link.startswith('https://cdn.discordapp.com/attachments/'):
+                await ctx.send("Cannot get context of non-Discord link.")
+            else:
+                link_parts = link.split('/')
+                if len(link_parts) < 7:
+                    await ctx.send("Malformed attachment link.")
+                else:
+                    guild_id = ctx.guild.id
+                    channel_id = link_parts[4]
+                    message_id = link_parts[5]
+                    await ctx.send(f'https://discordapp.com/channels/{guild_id}/{channel_id}/{message_id}')
 
     # @commands.command()
     # async def toggle(self, ctx, server=None):
