@@ -8,7 +8,7 @@ import ujson
 
 from config import sentiment_token
 import consts
-from consts import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LONKS_FILE, \
+from consts import MODELS_DIRECTORY, NAMES_FILE, USER_MODEL_FILE, LINKS_FILE, \
     MAX_NICKNAME_LENGTH, MAX_NUM_NAMES, MAX_MARKOV_ATTEMPTS
 from helpers import server_toggle as st
 from helpers.utility import remove_mentions
@@ -22,19 +22,11 @@ REFLEXIVE_TAG = 'me'
 BEGIN_TAG = 'BEGIN_LINE'
 END_TAG = 'END_LINE'
 
-with open(NAMES_FILE, 'r', encoding='utf-8-sig') as f:
-    RAW_NAMES = f.read().splitlines()
-
-NAMES = {}
-for line in RAW_NAMES:
-    id, name = line.split(';')
-    NAMES[id] = name
-
 with open(USER_MODEL_FILE, 'r', encoding='utf-8-sig') as f:
     USER_MODEL = markovify.Text.from_json(f.read())
 
 try:
-    with open(LONKS_FILE, 'r', encoding='utf-8-sig') as f:
+    with open(LINKS_FILE, 'r', encoding='utf-8-sig') as f:
         LINKS = f.read().splitlines()
 except FileNotFoundError:
     LINKS = None
@@ -73,7 +65,7 @@ class MarkovThread(Thread):
         if not self.person_ids:
             return
 
-        msg, nick = generate_markov(self.person_ids, self.root, self.num)
+        msg, nick = generate_markov(self.ctx, self.person_ids, self.root, self.num)
 
         bot_self = self.ctx.guild.me
 
@@ -108,26 +100,13 @@ def get_rand_link():
     return random.choice(LINKS)
 
 
-def get_rand_name():
-    """Gets a random name from NAMES."""
-    return random.choice(list(NAMES.values()))
-
-
-def get_name(name):
-    """Gets a name from an userid."""
-    if name in NAMES.keys():
-        return NAMES[name]
-    else:
-        return None
-
-
-def generate_markov(person_ids, root, num=1):
+def generate_markov(ctx, person_ids, root, num=1):
     """Generates a Markov sentence and nickname based off a list of Members and a given root."""
-    nick = generate_nick(person_ids)
+    nick = generate_nick(ctx, person_ids)
 
-    model = generate_model(person_ids)
+    model = generate_model(ctx, person_ids)
     if not model:
-        return "No output.", DEFAULT_NAME
+        return "Unable to retrieve models for " + nick + ".", DEFAULT_NAME
 
     out = ""
     for _ in range(num):
@@ -154,11 +133,12 @@ def generate_sentence(model, root=None):
         return None
 
 
-def generate_nick(person_ids):
+def generate_nick(ctx, person_ids):
     """Generates a nickname based off a list of Members."""
     nickname = ""
     for userid in person_ids:
-        curr_nick = NAMES[userid]
+        user_member = ctx.guild.get_member(userid)
+        curr_nick = user_member.nick if user_member.nick is not None else user_member.name
         if len(nickname) + len(curr_nick) < MAX_NICKNAME_LENGTH:
             nickname += curr_nick + '+'
 
@@ -187,21 +167,21 @@ def get_wait_time(avg, stddev):
     return wait_time
 
 
-def generate_model(userids, user_servers=None):
+def generate_model(ctx, userids, user_servers=None):
     """Generates a Markov model from a list of Member objects."""
     models = []
     for userid in userids:
-        if not user_servers:
-            user_servers = st.get_user_servers(userid)
-            if not user_servers:
-                continue
-        for server in user_servers:
-            try:
-                with open(f'{MODELS_DIRECTORY}{server}/{userid}.json', 'r', encoding='utf-8-sig') as json_file:
-                    models.append(markovify.Text.from_json(json_file.read()))
-            except FileNotFoundError:
-                print(f'userid: {userid}, server: {server}')
-                pass
+        # if not user_servers:
+        #     user_servers = st.get_user_servers(userid)
+        #     if not user_servers:
+        #         continue
+        # for server in user_servers:
+        try:
+            with open(f'{MODELS_DIRECTORY}{ctx.guild.id}/{userid}.json', 'r', encoding='utf-8-sig') as json_file:
+                models.append(markovify.Text.from_json(json_file.read()))
+        except FileNotFoundError:
+            print(f'File not found for userid: {userid}, server: {ctx.guild.id}')
+            pass
     if models:
         return markovify.combine(models)
     return None
@@ -211,53 +191,57 @@ def parse_names(ctx, person):
     """Retrieves a string of names and converts them into a list of userids."""
     namelist = person.lower().split('+')
     num_names = len(namelist)
-    guild_ids = [x.id for x in ctx.guild.members]
     if num_names > MAX_NUM_NAMES:
         raise TooManyInputsError(num_names)
     input_ids = []
 
     for name in namelist:
-        current_name = []
+        # Handle built-in tags.
         if name == RANDOM_TAG:
-            input_ids.append(random.choice(list(NAMES.keys())))
+            input_ids.append(random.choice([member.id for member in ctx.guild.members]))
         elif name == INCLUSIVE_TAG:
-            input_ids.extend(random.sample(list(NAMES.keys()), 5))
+            input_ids.extend(random.sample([member.id for member in ctx.guild.members], 5))
         elif name == REFLEXIVE_TAG:
-            input_ids.append(str(ctx.author.id))
-        else:
-            for userid in NAMES.keys():
-                if int(userid) not in guild_ids:
-                    continue
-                if name.lower() == NAMES[userid].lower():
-                    input_ids.append(userid)
-                    break
-                if name.lower() in NAMES[userid].lower():
-                    current_name.append(userid)
-            else:
-                if not current_name:
-                    raise NameNotFoundError(name)
-                elif len(current_name) == 1:
-                    if not ctx.guild.get_member(int(current_name[0])):
-                        raise NameNotFoundError(name)
-                    input_ids.append(current_name[0])
-                else:
-                    raise AmbiguousInputError(name, [NAMES[userid] for userid in current_name])
-    else:
-        return input_ids
+            input_ids.append(ctx.author.id)
 
+        # Otherwise, search for name in list of guild members.
+        else:
+            current_ids = []
+            for member in ctx.guild.members:
+                if member.nick and member.nick.lower() == name.lower():
+                    input_ids.append(member.id)
+                    break
+                elif member.nick and name.lower() in member.nick.lower():
+                    current_ids.append(member.id)
+                elif member.name.lower() == name.lower():
+                    input_ids.append(member.id)
+                    break
+                elif name.lower() in member.name.lower():
+                    current_ids.append(member.id)
+            # If exact match not found,
+            else:
+                if current_ids == []:
+                    raise NameNotFoundError(name)
+                elif len(current_ids) == 1:
+                    input_ids.append(current_ids[0])
+                else:
+                    raise AmbiguousInputError(
+                        name,
+                        [ctx.guild.get_member(userid).name for userid in current_ids]
+                    )
+        
+    return input_ids
 
 def print_names(ctx, search=None):
     messages = []
     curr_message = ""
     for member in ctx.guild.members:
-        if str(member.id) in NAMES.keys():
-            curr_name = NAMES[str(member.id)]
-            if search:
-                if search.lower() not in curr_name.lower():
-                    continue
-            if len(curr_message) + len(curr_name) >= consts.MAX_MESSAGE_LENGTH:
-                messages.append(curr_message[:-2])
-            curr_message += curr_name + ', '
+        member_name = member.nick if member.nick is not None else member.name
+        if search and search.lower() not in member_name.lower():
+                continue
+        if len(curr_message) + len(member_name) >= consts.MAX_MESSAGE_LENGTH:
+            messages.append(curr_message[:-2])
+        curr_message += member_name + ', '
     else:
         messages.append(curr_message[:-2])
     return messages
@@ -307,7 +291,7 @@ async def get_sentiment_analysis(ctx, name_str=None):
 
     sentiment_data = sentiment_cache[userid]
 
-    msg = f"__**{NAMES[userid]}'s Sentiment Analysis**__\n" \
+    msg = f"__**{userid}'s Sentiment Analysis**__\n" \
           f"```Label: {sentiment_data['label']}\n\n" \
           f"Probabilities:\n" \
           f"neg: {sentiment_data['probability']['neg']}\n" \

@@ -4,7 +4,7 @@ from discord.ext import commands
 
 from consts import MAX_NUM_NAMES
 from helpers import markov_helpers as mk
-from helpers import mk_fanfic as mkff
+# from helpers import mk_fanfic as mkff
 from helpers import server_toggle as st, channel_permissions as cp, simulation as sim
 from helpers.markov_helpers import REFLEXIVE_TAG
 
@@ -35,7 +35,6 @@ def has_post_permission(guildid, channelid):
 class Markov(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.simulation = sim.SimThread(bot)
 
     @commands.command(aliases=['mk'])
     async def do(self, ctx, person=REFLEXIVE_TAG, root=None):
@@ -43,7 +42,7 @@ class Markov(commands.Cog):
         if has_post_permission(ctx.guild.id, ctx.channel.id):
             await mk.MarkovThread(ctx, person, root).run()
 
-    @commands.command()
+    @commands.command(aliases=['mkmulti'])
     async def domulti(self, ctx, num=1, person=REFLEXIVE_TAG, root=None):
         """Creates multiple Markov sentences (up to 10)."""
         if has_post_permission(ctx.guild.id, ctx.channel.id):
@@ -57,7 +56,7 @@ class Markov(commands.Cog):
 
             await mk.MarkovThread(ctx, person, root, num).run()
 
-    @commands.command()
+    @commands.command(aliases=['mk10'])
     async def do10(self, ctx, person=REFLEXIVE_TAG, root=None):
         """Creates 10 Markov sentences."""
         if has_post_permission(ctx.guild.id, ctx.channel.id):
@@ -77,45 +76,44 @@ class Markov(commands.Cog):
                 for msg in messages:
                     await ctx.send(msg)
 
-    @commands.command(aliases=['sent'])
-    async def sentiment(self, ctx, name):
-        if has_post_permission(ctx.guild.id, ctx.channel.id):
-            msg = await mk.get_sentiment_analysis(ctx, name)
-            await ctx.send(msg)
+    # @commands.command(aliases=['sent'])
+    # async def sentiment(self, ctx, name):
+    #     if has_post_permission(ctx.guild.id, ctx.channel.id):
+    #         msg = await mk.get_sentiment_analysis(ctx, name)
+    #         await ctx.send(msg)
 
     @commands.command(aliases=['linkme', 'randlink', 'lonk'])
     async def random_link(self, ctx):
         """Returns a random link."""
-        if ctx.guild.id == 529904258233925632:
-            await ctx.send(mk.get_rand_link())
+        await ctx.send(mk.get_rand_link())
 
-    @commands.command()
-    async def toggle(self, ctx, server=None):
-        """Lists/Toggles servers you want the bot to pull from."""
-        if has_post_permission(ctx.guild.id, ctx.channel.id):
-            if server:
-                if not st.is_server(server):
-                    await ctx.send(f'{server} is not a valid server. Type `~toggle` to see a list of valid servers.')
-                else:
-                    server_added = st.toggle_server(ctx.author.id, server)
-                    if server_added:
-                        await ctx.send(f'{server} added to list of your Markov servers.')
-                    else:
-                        await ctx.send(f'{server} removed from list of your Markov servers.')
-            else:
-                out = st.list_servers(ctx.author.id)
-                await ctx.send(out)
+    # @commands.command()
+    # async def toggle(self, ctx, server=None):
+    #     """Lists/Toggles servers you want the bot to pull from."""
+    #     if has_post_permission(ctx.guild.id, ctx.channel.id):
+    #         if server:
+    #             if not st.is_server(server):
+    #                await ctx.send(f'{server} is not a valid server. Type `~toggle` to see a list of valid servers.')
+    #             else:
+    #                 server_added = st.toggle_server(ctx.author.id, server)
+    #                 if server_added:
+    #                     await ctx.send(f'{server} added to list of your Markov servers.')
+    #                 else:
+    #                     await ctx.send(f'{server} removed from list of your Markov servers.')
+    #         else:
+    #             out = st.list_servers(ctx.author.id)
+    #             await ctx.send(out)
 
-    @commands.command(aliases=['ff'])
-    async def fanfic(self, ctx, p1=None, p2=None, g1='m', g2='f'):
-        out = mkff.generate_fanfic(p1, p2, g1, g2)
-        await ctx.send(out)
+    # @commands.command(aliases=['ff'])
+    # async def fanfic(self, ctx, p1=None, p2=None, g1='m', g2='f'):
+    #     out = mkff.generate_fanfic(p1, p2, g1, g2)
+    #     await ctx.send(out)
 
-    @commands.command()
-    async def coiz(self, ctx):
-        with open('coizirl.txt', 'r') as f:
-            lines = f.read().splitlines()
-        await ctx.send(random.choice(lines))
+    # @commands.command()
+    # async def coiz(self, ctx):
+    #     with open('coizirl.txt', 'r') as f:
+    #         lines = f.read().splitlines()
+    #     await ctx.send(random.choice(lines))
 
     async def get_person_ids(self, ctx, person):
         try:
