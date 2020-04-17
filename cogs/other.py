@@ -6,6 +6,7 @@ import random
 import discord
 from discord.ext import commands
 
+from helpers import deathmatch as dm
 
 def calc_relationship(name1, name2=''):
     """Calculates the percent relationship between two people."""
@@ -16,6 +17,41 @@ def calc_relationship(name1, name2=''):
     percent = (total + 32) % 101
     return percent
 
+def get_member_from_guild(guild_members, username):
+    """From a str username and a list of all guild members returns the member whose name contains username."""
+    username = username.lower()
+    if username == 'rand':
+        return random.choice(guild_members)
+    else:
+        members = []
+        for member in guild_members:
+            if member.nick is not None:
+                if username == member.nick.replace(' ', '').lower():
+                    return member
+                elif username in member.nick.replace(' ', '').lower():
+                    members.append(member)
+            elif username == member.name.replace(' ', '').lower():
+                return member
+            elif username in member.name.replace(' ', '').lower():
+                members.append(member)
+
+        members_len = len(members)
+        if members_len == 0:
+            raise NameError(username)
+        elif members_len == 1:
+            return members[0]
+        else:
+            raise NameError([member.name for member in members])
+
+def parse_name(guild, username):
+    """Gets the username of a user from a string and guild."""
+    if '@' in username:
+        try:
+            return guild.get_member(int(username[3:-1]))
+        except:
+            raise NameError(username)
+    else:
+        return get_member_from_guild(guild.members, username)
 
 class Other(commands.Cog):
     """Defines Other commands."""
@@ -104,6 +140,22 @@ class Other(commands.Cog):
         for i in range(10):
             out += f'**{i + 1}**: `{word}` :heart: `{relationships[i][1].name}`: {relationships[i][0]}%\n'
         await ctx.send(out)
+
+    @commands.command(aliases=['dm'])
+    async def deathmatch(self, ctx, opponent='rand'):
+        """Allows users to duke it out in a 1v1 match."""
+        try:
+            opponent_member = parse_name(ctx.message.guild, opponent)
+        except NameError:
+            await ctx.send(f'Opponent not found in server, or maps to multiple people: {opponent}')
+            return
+        msg = await ctx.send(dm.DEATHMATCH_HEADER)
+        author_name = ctx.author.nick if ctx.author.nick else ctx.author.name
+        opponent_name = opponent_member.nick if opponent_member.nick else opponent_member.name
+        deathmatch_messages, winner = dm.do_deathmatch(author_name, opponent_name)
+        for message in deathmatch_messages[:-1]:
+            await msg.edit(content=message)
+            await asyncio.sleep(2)
 
 
 def setup(bot):

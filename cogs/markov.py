@@ -82,7 +82,7 @@ class Markov(commands.Cog):
     #         msg = await mk.get_sentiment_analysis(ctx, name)
     #         await ctx.send(msg)
 
-    @commands.command(aliases=['linkme', 'randlink', 'lonk'])
+    @commands.command(aliases=['link', 'linkme', 'randlink', 'lonk'])
     async def random_link(self, ctx, link=None):
         """Returns a random link."""
         if link is None:
