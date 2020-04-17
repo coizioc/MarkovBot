@@ -83,7 +83,7 @@ class Markov(commands.Cog):
     #         await ctx.send(msg)
 
     @commands.command(aliases=['linkme', 'randlink', 'lonk'])
-    async def random_link(self, ctx, link):
+    async def random_link(self, ctx, link=None):
         """Returns a random link."""
         if link is None:
             await ctx.send(mk.get_rand_link())
