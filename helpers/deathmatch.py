@@ -1,7 +1,7 @@
 """Implements methods related to the deathmatch commands of miniscapebot.cogs.gastercoin."""
 import random
 
-from config import DEATHMATCH_FILE
+from consts import DEATHMATCH_FILE
 
 DEATHMATCH_HEADER = '__**:anger:DEATHMATCH:anger:**__'
 
@@ -42,7 +42,7 @@ def calculate_damage(power):
         return damage
 
 
-def do_deathmatch(fighter1, fighter2, bet=None):
+def do_deathmatch(fighter1, fighter2):
     """Simulates each turn in a deathmatch and outputs the turns in the deathmatch as a list of strings."""
     is_fighter1turn = False
     fighter1_health = 100
@@ -109,20 +109,12 @@ def do_deathmatch(fighter1, fighter2, bet=None):
 
         # Checks if either fighter is dead and breaks the loop.
         if fighter2_health < 1:
-            current_message += f'\n:trophy: **{fighter1} has won'
-            if bet is not None:
-                current_message += f' G${bet}!**'
-            else:
-                current_message += f'!**'
+            current_message += f'\n:trophy: **{fighter1} has won!**'
             deathmatch_messages.append(current_message)
             winner = fighter1
             break
         if fighter1_health < 1:
-            current_message += f'\n:trophy: **{fighter2} has won'
-            if bet is not None:
-                current_message += f' G${bet}!**'
-            else:
-                current_message += f'!**'
+            current_message += f'\n:trophy: **{fighter2} has won!**'
             deathmatch_messages.append(current_message)
             winner = fighter2
             break
