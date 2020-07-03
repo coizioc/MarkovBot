@@ -34,14 +34,24 @@ def get_serverid(filename):
             return None
 
 
-def remove_mentions(msg, current_guild):
+def is_mention(word: str):
+    return word.startswith('<@') or word.startswith('<@!')
+
+def get_user_tags(msg: str) -> set:
+    user_tags = set()
+    for line in msg.splitlines():
+        user_tags.update([word for word in line.split() if is_mention(word)])
+    return user_tags
+
+
+def remove_mentions(msg, current_guild) -> str:
     """
     Removes mentions from a message.
     :param msg: str
     :param current_guild: Guild object
     :return: the message, with mentions removed.
     """
-    user_tags = set([c for c in msg.split(' ') if c[0:2] == '<@'])
+    user_tags = get_user_tags(msg)
     for user_tag in user_tags:
         userid = int(re.sub('\D', '', user_tag))
         username = current_guild.get_member(userid)
