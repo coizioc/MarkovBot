@@ -155,13 +155,16 @@ class MarkovSimulator(commands.Bot):
                 else:
                     e = None
 
-                webhook_avatar = await next_user_member.avatar_url.read()
-                webhook = await bot_channel.create_webhook(name=nick, avatar=webhook_avatar)
                 try:
-                    await webhook.send(msg, embed=e)
-                except HTTPException:
-                    pass
-                await webhook.delete()
+                    webhook_avatar = await next_user_member.avatar_url.read()
+                    webhook = await bot_channel.create_webhook(name=nick, avatar=webhook_avatar)
+                    try:
+                        await webhook.send(msg, embed=e)
+                    except HTTPException:
+                        pass
+                    await webhook.delete()
+                except Exception:
+                    continue
 
             wait_time = get_wait_time(self.avg, self.stddev)
             await asyncio.sleep(wait_time)
