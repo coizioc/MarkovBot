@@ -1,6 +1,9 @@
 import datetime
+import os
 import re
 import ujson
+
+from discord import Embed
 
 from config import SIMULATOR_CHANNEL
 from consts import SERVERS_FILE, SERVER_JSON_DIRECTORY
@@ -58,8 +61,12 @@ def get_message_json(message, author_index):
     if message_embeds:
         message_json['e'] = []
         for embed in message_embeds:
+            if embed.url == Embed.Empty or embed.type == Embed.Empty:
+                continue
             embed_json = {"url": embed.url, "type": embed.type}
             if embed_json['type'] == 'rich':
+                if embed.title == Embed.Empty or embed.description == Embed.Empty:
+                    continue
                 embed_json['t'] = embed.title
                 embed_json['d'] = embed.description
             message_json['e'].append(embed_json)
@@ -137,5 +144,7 @@ async def setup_server(ctx):
         curr_channel_num += 1
     print(f"Server saved to {server_filename}.json!")
 
+    if not os.path.exists(SERVER_JSON_DIRECTORY):
+        os.makedirs(SERVER_JSON_DIRECTORY)
     with open(f'{SERVER_JSON_DIRECTORY}{server_filename}.json', 'w+') as f:
         ujson.dump(server_json, f)

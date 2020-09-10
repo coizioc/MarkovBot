@@ -22,8 +22,11 @@ REFLEXIVE_TAG = 'me'
 BEGIN_TAG = 'BEGIN_LINE'
 END_TAG = 'END_LINE'
 
-with open(USER_MODEL_FILE, 'r', encoding='utf-8-sig') as f:
-    USER_MODEL = markovify.Text.from_json(f.read())
+try:
+    with open(USER_MODEL_FILE, 'r', encoding='utf-8-sig') as f:
+        USER_MODEL = markovify.Text.from_json(f.read())
+except FileNotFoundError:
+    USER_MODEL = None
 
 try:
     with open(LINKS_FILE, 'r', encoding='utf-8-sig') as f:

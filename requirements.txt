@@ -1,5 +1,5 @@
 requests
-aiohttp==2.2.5
+aiohttp==3.6.2
 async-timeout==3.0.1
 attrs==19.1.0
 chardet==3.0.4
@@ -10,7 +10,7 @@ markovify==0.7.1
 multidict==4.5.2
 numpy==1.16.2
 typing-extensions==3.7.2
-ujson==1.35
+ujson==2.0.3
 Unidecode==1.0.23
-websockets==5.0
+websockets==8.1
 yarl<1.2

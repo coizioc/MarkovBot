@@ -65,15 +65,15 @@ def update_names(server_json):
     for userid in server_json['meta']['users']:
         out += f"{userid};{server_json['meta']['users'][userid]['name'].replace(';', ':')}\n"
     new_names = out.split('\n')
-    with open(NAMES_FILE, 'r+', encoding='utf-8-sig') as f:
+    with open(NAMES_FILE, 'a+', encoding='utf-8-sig') as f:
         old_names = f.read().splitlines()
 
-    for name in new_names:
-        if name not in old_names:
-            old_names.append(name)
-
-    with open(NAMES_FILE, 'w+', encoding='utf-8-sig') as f:
-        f.write('\n'.join(old_names))
+        for name in new_names:
+            if name not in old_names:
+                # old_names.append(name)
+                f.write(name + '\n')
+    # with open(NAMES_FILE, 'w+', encoding='utf-8-sig') as f:
+    # f.write('\n'.join(old_names))
 
 
 def parse_server(filename):
