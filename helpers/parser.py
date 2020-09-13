@@ -4,7 +4,7 @@ from datetime import datetime
 
 import markovify
 
-from consts import SERVER_JSON_DIRECTORY, MESSAGES_DIRECTORY, NAMES_FILE
+from consts import SERVER_JSON_DIRECTORY, MESSAGES_DIRECTORY, NAMES_FILE, LINKS_FILE
 from helpers.utility import get_serverid
 
 
@@ -16,6 +16,32 @@ def append_text(messages, serverid):
             with open(f'{MESSAGES_DIRECTORY}{serverid}/{userid}.txt', 'a+', encoding='utf-8') as f:
                 f.write(corpus)
     print(f"Wrote in {datetime.now() - start_time}")
+
+
+def links_to_file(filename):
+    print(f'Making links file from {filename}...')
+    with open(f'{SERVER_JSON_DIRECTORY}{filename}', "r", encoding="utf-8-sig") as f:
+        server_json = ujson.load(f)
+
+        out = set({})
+        for channel in server_json['data']:
+            for message in server_json['data'][channel]:
+                curr_message = server_json['data'][channel][message]
+                if "a" in curr_message.keys():
+                    for link in curr_message["a"]:
+                        for key in link.keys():
+                            out.add(f"{link[key]}")
+                elif "e" in curr_message.keys():
+                    for embed in curr_message["e"]:
+                        for key in embed.keys():
+                            out.add(f"{embed[key]}")
+
+    out = [x for x in out if x.startswith("http")]
+    print(f'Retrieved {len(out)} links!')
+
+    with open(LINKS_FILE, "w+", encoding="utf-8-sig") as f:
+        f.write("\n".join(out))
+    print('Successfully saved links file.')
 
 
 # 7776000 = 90 days in seconds

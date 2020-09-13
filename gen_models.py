@@ -3,7 +3,7 @@ import helpers.parser as ps
 import os
 import argparse
 
-from consts import SERVER_JSON_DIRECTORY, MODELS_DIRECTORY
+from consts import SERVER_JSON_DIRECTORY, MODELS_DIRECTORY, LINKS_FILE
 
 
 def parse_servers(args):
@@ -54,15 +54,21 @@ if __name__ == '__main__':
                         help="only converts the messages from the server and does not parse messages from the file.")
     parser.add_argument('--simmodel', '-s', dest='sim_model', action='store_true',
                         help="creates the simulation user model, which determines which order users post in the simulation.")
+    parser.add_argument('--links', '-l', dest='gen_links', action='store_true', help='generates the links file.')
     args = parser.parse_args()
 
     if not args.files:
         args.files = [input("Enter the name of the json you want to convert: ")]
     if args.sim_model:
         if not args.files:
-            print("Please specify a from which the sim model will be created.")
+            print("Please specify a server json from which the sim model will be created.")
         else:
             ps.gen_simmodel(args.files[0])
+    elif args.gen_links:
+        if not args.files:
+            print("Please specify a server json from which the links file will be created.")
+        else:
+            ps.links_to_file(args.files[0])
     else:
         # Parse servers.
         if not os.path.isdir(SERVER_JSON_DIRECTORY):
