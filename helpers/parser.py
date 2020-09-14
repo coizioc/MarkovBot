@@ -23,18 +23,18 @@ def links_to_file(filename):
     with open(f'{SERVER_JSON_DIRECTORY}{filename}', "r", encoding="utf-8-sig") as f:
         server_json = ujson.load(f)
 
-        out = set({})
+        out = set()
         for channel in server_json['data']:
             for message in server_json['data'][channel]:
                 curr_message = server_json['data'][channel][message]
                 if "a" in curr_message.keys():
                     for link in curr_message["a"]:
-                        for key in link.keys():
-                            out.add(f"{link[key]}")
-                elif "e" in curr_message.keys():
+                        if "url" in link.keys():
+                            out.add(f"{link['url']}")
+                if "e" in curr_message.keys():
                     for embed in curr_message["e"]:
-                        for key in embed.keys():
-                            out.add(f"{embed[key]}")
+                        if "url" in embed.keys():
+                            out.add(f"{embed['url']}")
 
     out = [x for x in out if x.startswith("http")]
     print(f'Retrieved {len(out)} links!')
