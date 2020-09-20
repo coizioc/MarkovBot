@@ -21,6 +21,8 @@ def convert_server(filename=None, serverid=None):
         return
     print("Converting server " + serverid)
 
+    if not os.path.exists(MODELS_DIRECTORY):
+        os.mkdir(MODELS_DIRECTORY)
     if not os.path.exists(server_model_dir):
         os.mkdir(server_model_dir)
     for user_file in os.listdir(server_messages_dir):

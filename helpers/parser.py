@@ -4,7 +4,7 @@ from datetime import datetime
 
 import markovify
 
-from consts import SERVER_JSON_DIRECTORY, MESSAGES_DIRECTORY, NAMES_FILE
+from consts import SERVER_JSON_DIRECTORY, MESSAGES_DIRECTORY, NAMES_FILE, LINKS_FILE
 from helpers.utility import get_serverid
 
 
@@ -16,6 +16,32 @@ def append_text(messages, serverid):
             with open(f'{MESSAGES_DIRECTORY}{serverid}/{userid}.txt', 'a+', encoding='utf-8') as f:
                 f.write(corpus)
     print(f"Wrote in {datetime.now() - start_time}")
+
+
+def links_to_file(filename):
+    print(f'Making links file from {filename}...')
+    with open(f'{SERVER_JSON_DIRECTORY}{filename}', "r", encoding="utf-8-sig") as f:
+        server_json = ujson.load(f)
+
+        out = set()
+        for channel in server_json['data']:
+            for message in server_json['data'][channel]:
+                curr_message = server_json['data'][channel][message]
+                if "a" in curr_message.keys():
+                    for link in curr_message["a"]:
+                        if "url" in link.keys():
+                            out.add(f"{link['url']}")
+                if "e" in curr_message.keys():
+                    for embed in curr_message["e"]:
+                        if "url" in embed.keys():
+                            out.add(f"{embed['url']}")
+
+    out = [x for x in out if x.startswith("http")]
+    print(f'Retrieved {len(out)} links!')
+
+    with open(LINKS_FILE, "w+", encoding="utf-8-sig") as f:
+        f.write("\n".join(out))
+    print('Successfully saved links file.')
 
 
 # 7776000 = 90 days in seconds
@@ -65,15 +91,15 @@ def update_names(server_json):
     for userid in server_json['meta']['users']:
         out += f"{userid};{server_json['meta']['users'][userid]['name'].replace(';', ':')}\n"
     new_names = out.split('\n')
-    with open(NAMES_FILE, 'r+', encoding='utf-8-sig') as f:
+    with open(NAMES_FILE, 'a+', encoding='utf-8-sig') as f:
         old_names = f.read().splitlines()
 
-    for name in new_names:
-        if name not in old_names:
-            old_names.append(name)
-
-    with open(NAMES_FILE, 'w+', encoding='utf-8-sig') as f:
-        f.write('\n'.join(old_names))
+        for name in new_names:
+            if name not in old_names:
+                # old_names.append(name)
+                f.write(name + '\n')
+    # with open(NAMES_FILE, 'w+', encoding='utf-8-sig') as f:
+    # f.write('\n'.join(old_names))
 
 
 def parse_server(filename):

@@ -110,7 +110,10 @@ class MarkovSimulator(commands.Bot):
             if not self.queue:
                 self.fill_queue()
             curr_userid = self.queue.pop(0)
-            if int(curr_userid) in config.IGNORE_USERS:
+            if curr_userid == '':
+                print(self.queue)
+                raise ValueError()
+            if curr_userid in config.IGNORE_USERS:
                 continue
             next_user_member = bot_guild.get_member(int(curr_userid))
             if not next_user_member:
@@ -148,10 +151,12 @@ class MarkovSimulator(commands.Bot):
                     e = Embed()
                     while True:
                         link = get_link()
-                        if 'discordapp' in link:
+                        if link is None or 'discordapp' in link:
                             break
-
-                    e.set_image(url=link)
+                    if link is not None:
+                        e.set_image(url=link)
+                    else:
+                        e = None
                 else:
                     e = None
 
@@ -160,6 +165,7 @@ class MarkovSimulator(commands.Bot):
                     webhook = await bot_channel.create_webhook(name=nick, avatar=webhook_avatar)
                     try:
                         await webhook.send(msg, embed=e)
+                        print(nick, ':', msg)
                     except HTTPException:
                         pass
                     await webhook.delete()

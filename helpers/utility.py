@@ -51,6 +51,9 @@ def remove_mentions(msg, current_guild) -> str:
     :param current_guild: Guild object
     :return: the message, with mentions removed.
     """
+    msg = msg.replace('@everyone', '@\u200beveryone')
+    msg = msg.replace('@here', '@\u200bhere')
+    
     user_tags = get_user_tags(msg)
     for user_tag in user_tags:
         userid = int(re.sub('\D', '', user_tag))
@@ -86,7 +89,8 @@ def get_sim_model(serverid=None):
             sim_model = markovify.NewlineText.from_json(f.read())
             return sim_model
     except FileNotFoundError:
-        raise FileNotFoundError(f'{sim_guild_name}_sim_model.json')
+        return {}
+        # raise FileNotFoundError(f'{sim_guild_name}_sim_model.json')
 
 
 def get_link():
@@ -94,6 +98,9 @@ def get_link():
     Returns a random link from the links file.
     :return: str representing the link's url.
     """
-    with open(LINKS_FILE, 'r', encoding='utf-8') as f:
-        links = f.read().splitlines()
-    return random.choice(links)
+    try:
+        with open(LINKS_FILE, 'r', encoding='utf-8') as f:
+            links = f.read().splitlines()
+        return random.choice(links)
+    except FileNotFoundError:
+        return None
