@@ -51,6 +51,9 @@ def remove_mentions(msg, current_guild) -> str:
     :param current_guild: Guild object
     :return: the message, with mentions removed.
     """
+    msg = msg.replace('@everyone', '@\u200beveryone')
+    msg = msg.replace('@here', '@\u200bhere')
+    
     user_tags = get_user_tags(msg)
     for user_tag in user_tags:
         userid = int(re.sub('\D', '', user_tag))
