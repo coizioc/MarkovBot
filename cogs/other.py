@@ -153,7 +153,7 @@ class Other(commands.Cog):
         author_name = ctx.author.nick if ctx.author.nick else ctx.author.name
         opponent_name = opponent_member.nick if opponent_member.nick else opponent_member.name
         deathmatch_messages, winner = dm.do_deathmatch(author_name, opponent_name)
-        for message in deathmatch_messages[:-1]:
+        for message in deathmatch_messages:
             await msg.edit(content=message)
             await asyncio.sleep(2)
 
