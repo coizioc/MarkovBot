@@ -120,8 +120,12 @@ class MarkovSimulator(commands.Bot):
             if int(curr_userid) in config.IGNORE_USERS:
                 print('ignored user', curr_userid)
                 continue
-            next_user_member = await bot_guild.fetch_member(int(curr_userid))
-            if not next_user_member:
+            try:
+                next_user_member = await bot_guild.fetch_member(int(curr_userid))
+            except Exception as e:
+                print(e)
+                next_user_member = None
+            if next_user_member is None:
                 print('cannot find user member for userid', curr_userid)
                 continue
 
