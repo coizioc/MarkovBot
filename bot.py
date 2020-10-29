@@ -1,10 +1,15 @@
 import logging
 import os
 
+import discord
 from discord.ext import commands
 
 import config
 from consts import DESCRIPTION, DEFAULT_NAME
+
+intents = discord.Intents.default()
+intents.members = True
+intents.presences = True
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +27,7 @@ class MarkovBot(commands.Bot):
     """Defines the MarkovBot class and functions."""
 
     def __init__(self):
-        super().__init__(command_prefix=["$"], description=DESCRIPTION)
+        super().__init__(command_prefix=["$"], description=DESCRIPTION, intents=intents)
         self.token = config.token
         self.default_nick = DEFAULT_NAME
         self.add_command(self.load)

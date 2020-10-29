@@ -4,6 +4,7 @@ import random
 import ujson
 
 import markovify
+import discord
 from discord.ext import commands
 from discord import Embed
 from discord.errors import HTTPException
@@ -13,6 +14,10 @@ import consts
 import helpers.setup_helpers as setuph
 from helpers.markov_helpers import get_wait_time
 from helpers.utility import remove_mentions, get_sim_model, get_link
+
+intents = discord.Intents.default()
+intents.members = True
+intents.presences = True
 
 try:
     with open('bots.json', 'r', encoding='utf-8-sig') as f:
@@ -43,7 +48,7 @@ def find_names(msg):
 
 class MarkovSimulator(commands.Bot):
     def __init__(self, args):
-        super().__init__(command_prefix="mk$", description="Simulator for MarkovBot.")
+        super().__init__(command_prefix="mk$", description="Simulator for MarkovBot.", intents=intents)
         self.token = config.sim_token
         self.do_setup = args.do_setup
         self.debug_vals = args.debug_vals
@@ -111,16 +116,18 @@ class MarkovSimulator(commands.Bot):
                 self.fill_queue()
             curr_userid = self.queue.pop(0)
             if curr_userid == '':
-                print(self.queue)
                 raise ValueError()
-            if curr_userid in config.IGNORE_USERS:
+            if int(curr_userid) in config.IGNORE_USERS:
+                print('ignored user', curr_userid)
                 continue
-            next_user_member = bot_guild.get_member(int(curr_userid))
+            next_user_member = await pipbot_guild.fetch_member(int(curr_userid))
             if not next_user_member:
+                print('cannot find user member for userid', curr_userid)
                 continue
 
             model = self.get_model(curr_userid)
             if not model:
+                print('cannot get model for user with id', curr_userid)
                 continue
 
             for _ in range(3):
@@ -170,6 +177,7 @@ class MarkovSimulator(commands.Bot):
                         pass
                     await webhook.delete()
                 except Exception:
+                    print('unable to send webhook message for userid', curr_userid)
                     continue
 
             wait_time = get_wait_time(self.avg, self.stddev)
@@ -189,5 +197,7 @@ if __name__ == '__main__':
     parser.add_argument('--embed', dest='embed', type=float, nargs=1,
                         help=f"Percent of posts that will contain images (default {EMBED_RATE})")
     args = parser.parse_args()
+
+    print('running')
 
     MarkovSimulator(args).run()
