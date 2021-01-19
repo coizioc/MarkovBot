@@ -4,7 +4,7 @@ from datetime import datetime
 
 import markovify
 
-from consts import SERVER_JSON_DIRECTORY, MESSAGES_DIRECTORY, NAMES_FILE, LINKS_FILE
+from consts import SERVER_JSON_DIRECTORY, MESSAGES_DIRECTORY, NAMES_FILE, LINKS_FILE, POST_SEPARATOR
 from helpers.utility import get_serverid
 
 
@@ -96,10 +96,7 @@ def update_names(server_json):
 
         for name in new_names:
             if name not in old_names:
-                # old_names.append(name)
                 f.write(name + '\n')
-    # with open(NAMES_FILE, 'w+', encoding='utf-8-sig') as f:
-    # f.write('\n'.join(old_names))
 
 
 def parse_server(filename):
@@ -141,7 +138,7 @@ def parse_server(filename):
                 userid = userids[int(user_index)]
                 if userid not in messages.keys():
                     messages[userid] = ''
-                messages[userid] += f'{message}\n'
+                messages[userid] += f'{message}{POST_SEPARATOR}'
                 msg_in_messages += 1
                 if msg_in_messages >= 100000:
                     append_text(messages, serverid)
