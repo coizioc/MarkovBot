@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import random
 import ujson
+import traceback
 
 import markovify
 import discord
@@ -112,19 +113,15 @@ class MarkovSimulator(commands.Bot):
         while True:
             next_user_member = None
             # Pop next poster from queue
-            if not self.queue:
+            if len(self.queue) == 0:
                 self.fill_queue()
             curr_userid = self.queue.pop(0)
             if curr_userid == '':
-                raise ValueError()
+                continue
             if int(curr_userid) in config.IGNORE_USERS:
                 print('ignored user', curr_userid)
                 continue
-            try:
-                next_user_member = await bot_guild.fetch_member(int(curr_userid))
-            except Exception as e:
-                print(e)
-                next_user_member = None
+            next_user_member = bot_guild.get_member(int(curr_userid))
             if next_user_member is None:
                 print('cannot find user member for userid', curr_userid)
                 continue
@@ -153,36 +150,41 @@ class MarkovSimulator(commands.Bot):
                 self.topic = msg.split(' ')[-1]
                 
                 msg = remove_mentions(msg, bot_guild)
-                nick = next_user_member.nick
-                if not nick:
-                    nick = next_user_member.name
+                nick = next_user_member.display_name
 
                 # Add image
                 if random.random() < self.embed_rate:
-                    e = Embed()
+                    embed = Embed()
                     while True:
                         link = get_link()
                         if link is None or 'discordapp' in link:
                             break
                     if link is not None:
-                        e.set_image(url=link)
+                        embed.set_image(url=link)
                     else:
-                        e = None
+                        embed = None
                 else:
-                    e = None
+                    embed = None
 
                 try:
                     webhook_avatar = await next_user_member.avatar_url.read()
-                    webhook = await bot_channel.create_webhook(name=nick, avatar=webhook_avatar)
-                    try:
-                        await webhook.send(msg, embed=e)
-                        print(nick, ':', msg)
-                    except HTTPException:
-                        pass
-                    await webhook.delete()
-                except Exception:
-                    print('unable to send webhook message for userid', curr_userid)
+                except Exception as e:
+                    print("unable to get user avatar for userid", curr_userid, "Reason:", e)
                     continue
+
+                try:
+                    webhook = await bot_channel.create_webhook(name=nick, avatar=webhook_avatar)
+                except Exception as e:
+                    print("unable to create webhook for userid", curr_userid, "Reason:", e)
+                    continue
+
+                try:
+                    await webhook.send(msg, embed=embed)
+                    print(nick, ':', msg)
+                except Exception as e:
+                    print('unable to send webhook message for userid', curr_userid, 'Reason:', e)
+                finally:
+                    await webhook.delete()
 
             wait_time = get_wait_time(self.avg, self.stddev)
             await asyncio.sleep(wait_time)
